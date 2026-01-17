@@ -1,85 +1,75 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Emails {
 
     public static function init() {
-        // Estendibile per email ETS aggiuntive
+        add_action( 'woocommerce_email_after_order_table', [ __CLASS__, 'email_payment_and_delivery' ], 5, 4 );
     }
 
-    public static function send_donation_summary_email( $user, $donations, $year ) {
-        $to = $user->user_email;
+    public static function email_payment_and_delivery( $order, $sent_to_admin, $plain_text, $email ) {
 
-        if ( ! $to ) {
-            return false;
+        if ( ! $order instanceof WC_Order ) {
+            return;
         }
 
-        $subject = sprintf(
-            __( 'Riepilogo donazioni anno %d', 'woosolid' ),
-            $year
-        );
+        $payment_method = $order->get_payment_method_title();
+        $status         = $order->get_status();
 
-        $name = trim( $user->first_name . ' ' . $user->last_name );
-        if ( '' === $name ) {
-            $name = $user->display_name;
+        // Stato pagamento leggibile
+        $payment_status = 'Da pagare';
+        if ( in_array( $status, [ 'processing', 'completed' ], true ) ) {
+            $payment_status = 'Pagato';
         }
 
-        $body  = '';
-        $body .= sprintf( __( 'Gentile %s,', 'woosolid' ), $name ) . "\n\n";
-        $body .= sprintf(
-            __( 'di seguito trova il riepilogo delle donazioni effettuate nell’anno %d.', 'woosolid' ),
-            $year
-        ) . "\n\n";
+        // Dati consegna / ritiro (adatta alle tue meta key WooSolid)
+        $pickup_id = $order->get_meta( '_woosolid_pickup_id' );
+        $delivery  = $order->get_meta( '_woosolid_delivery_address' );
 
-        if ( empty( $donations ) ) {
-            $body .= __( 'Non risultano donazioni registrate per l’anno selezionato.', 'woosolid' ) . "\n\n";
-        } else {
-            $body .= __( 'DONAZIONI NOMINATIVE', 'woosolid' ) . "\n";
-            $body .= "----------------------------------------\n";
+        echo '<h2>Pagamento</h2>';
+        echo '<p>';
+        echo '<strong>Metodo di pagamento:</strong> ' . esc_html( $payment_method ) . '<br>';
+        echo '<strong>Stato pagamento:</strong> ' . esc_html( $payment_status );
+        echo '</p>';
 
-            $total = 0;
+        echo '<h2>Dettagli consegna</h2>';
 
-            foreach ( $donations as $donation ) {
-                $date          = date_i18n( 'd/m/Y', strtotime( $donation['date'] ) );
-                $amount        = number_format_i18n( $donation['amount'], 2 );
-                $campaign_name = $donation['campaign_name'] ?: __( 'Campagna sconosciuta', 'woosolid' );
-                $note          = $donation['note'];
+        if ( $pickup_id ) {
 
-                $body .= sprintf( __( 'Data: %s', 'woosolid' ), $date ) . "\n";
-                $body .= sprintf( __( 'Campagna: %s', 'woosolid' ), $campaign_name ) . "\n";
-                $body .= sprintf( __( 'Importo: € %s', 'woosolid' ), $amount ) . "\n";
-                if ( $note ) {
-                    $body .= sprintf( __( 'Causale: %s', 'woosolid' ), $note ) . "\n";
-                }
-                $body .= "\n";
+            $post = get_post( $pickup_id );
+            if ( $post && $post->post_type === 'woosolid_pickup' ) {
 
-                $total += (float) $donation['amount'];
+                $indirizzo = get_post_meta( $pickup_id, '_woosolid_pickup_indirizzo', true );
+                $citta     = get_post_meta( $pickup_id, '_woosolid_pickup_citta', true );
+                $provincia = get_post_meta( $pickup_id, '_woosolid_pickup_provincia', true );
+                $nazione   = get_post_meta( $pickup_id, '_woosolid_pickup_nazione', true );
+                $orari     = get_post_meta( $pickup_id, '_woosolid_pickup_orari', true );
+                $referente = get_post_meta( $pickup_id, '_woosolid_pickup_referente', true );
+                $telefono  = get_post_meta( $pickup_id, '_woosolid_pickup_telefono', true );
+
+                echo '<p><strong>Punto di ritiro:</strong><br>';
+                echo esc_html( get_the_title( $pickup_id ) ) . '<br>';
+                if ( $indirizzo ) echo esc_html( $indirizzo ) . '<br>';
+                if ( $citta || $provincia ) echo esc_html( trim( $citta . ' ' . $provincia ) ) . '<br>';
+                if ( $nazione ) echo esc_html( $nazione ) . '<br>';
+                if ( $orari ) echo '<br><strong>Orari:</strong> ' . nl2br( esc_html( $orari ) ) . '<br>';
+                if ( $referente ) echo '<strong>Referente:</strong> ' . esc_html( $referente ) . '<br>';
+                if ( $telefono ) echo '<strong>Telefono:</strong> ' . esc_html( $telefono ) . '<br>';
+                echo '</p>';
             }
 
-            $body .= "----------------------------------------\n";
-            $body .= sprintf(
-                __( 'Totale donazioni anno %d: € %s', 'woosolid' ),
-                $year,
-                number_format_i18n( $total, 2 )
-            ) . "\n\n";
+        } elseif ( ! empty( $delivery ) ) {
+
+            echo '<p><strong>Consegna a domicilio:</strong><br>';
+            echo nl2br( esc_html( $delivery ) );
+            echo '</p>';
+
+        } else {
+
+            // fallback: indirizzo di spedizione WooCommerce
+            echo '<p><strong>Indirizzo di consegna:</strong><br>';
+            echo wp_kses_post( $order->get_formatted_shipping_address() );
+            echo '</p>';
         }
-
-        $body .= __( 'Questa comunicazione è valida ai fini fiscali secondo la normativa vigente sulle erogazioni liberali.', 'woosolid' ) . "\n\n";
-
-        $ets_name = get_option( 'woosolid_ets_name' );
-        $ets_cf   = get_option( 'woosolid_ets_cf' );
-
-        if ( $ets_name ) {
-            $body .= $ets_name . "\n";
-        }
-        if ( $ets_cf ) {
-            $body .= sprintf( __( 'Codice Fiscale: %s', 'woosolid' ), $ets_cf ) . "\n";
-        }
-
-        $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
-
-        return wp_mail( $to, $subject, $body, $headers );
     }
 }
