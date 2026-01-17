@@ -1,470 +1,208 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Wizard {
 
-    public static function init() {
-        add_action( 'admin_menu', [ __CLASS__, 'register_page' ] );
+    public function __construct() {
+        add_action( 'admin_menu', [ $this, 'add_wizard_page' ] );
+        add_action( 'admin_post_woosolid_run_wizard', [ $this, 'run_wizard' ] );
     }
 
     /**
-     * Pagina Wizard (nascosta dal menu)
+     * Aggiunge la pagina del wizard nel backend
      */
-    public static function register_page() {
+    public function add_wizard_page() {
         add_menu_page(
-            'WooSolid Setup',
-            '',
+            'WooSolid Wizard',
+            'WooSolid Wizard',
             'manage_options',
             'woosolid-wizard',
-            [ __CLASS__, 'render_page' ],
-            '',
-            1
+            [ $this, 'wizard_page_html' ],
+            'dashicons-admin-tools',
+            56
         );
     }
 
     /**
-     * Render pagina Wizard
+     * HTML della pagina wizard
      */
-    public static function render_page() {
-
-        if ( get_option( 'woosolid_setup_done' ) === 'no' ) {
-            self::run_setup();
-        }
-
+    public function wizard_page_html() {
         ?>
         <div class="wrap">
-            <h1>Configurazione WooSolid</h1>
+            <h1>WooSolid – Wizard di inizializzazione</h1>
+            <p>Questo wizard crea automaticamente l’ente gestore, le pagine necessarie e i dati demo.</p>
 
-            <?php if ( get_option( 'woosolid_setup_done' ) === 'running' ) : ?>
+            <form method="post" action="<?php echo admin_url( 'admin-post.php' ); ?>">
+                <input type="hidden" name="action" value="woosolid_run_wizard">
 
-                <p>Configurazione in corso…</p>
-                <p><em>Non chiudere questa pagina.</em></p>
+                <h2>Dati Ente Gestore</h2>
 
-            <?php else : ?>
+                <table class="form-table">
+                    <tr>
+                        <th><label for="company_name">Ragione Sociale</label></th>
+                        <td><input type="text" name="company_name" id="company_name" class="regular-text" required></td>
+                    </tr>
 
-                <p>Configurazione completata!</p>
+                    <tr>
+                        <th><label for="company_piva">Partita IVA</label></th>
+                        <td><input type="text" name="company_piva" id="company_piva" class="regular-text"></td>
+                    </tr>
 
-                <script>
-                    setTimeout(function(){
-                        window.location.href = "<?php echo admin_url( 'admin.php?page=woosolid-settings' ); ?>";
-                    }, 1500);
-                </script>
+                    <tr>
+                        <th><label for="company_cf">Codice Fiscale Ente</label></th>
+                        <td><input type="text" name="company_cf" id="company_cf" class="regular-text"></td>
+                    </tr>
 
-            <?php endif; ?>
+                    <tr>
+                        <th><label for="company_pec">PEC</label></th>
+                        <td><input type="email" name="company_pec" id="company_pec" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="company_sdi">SDI</label></th>
+                        <td><input type="text" name="company_sdi" id="company_sdi" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="company_address">Indirizzo sede legale</label></th>
+                        <td><input type="text" name="company_address" id="company_address" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="company_city">Città</label></th>
+                        <td><input type="text" name="company_city" id="company_city" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="company_postcode">CAP</label></th>
+                        <td><input type="text" name="company_postcode" id="company_postcode" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="company_state">Provincia</label></th>
+                        <td><input type="text" name="company_state" id="company_state" class="regular-text"></td>
+                    </tr>
+                </table>
+
+                <h2>Dati Rappresentante Legale</h2>
+
+                <table class="form-table">
+                    <tr>
+                        <th><label for="first_name">Nome</label></th>
+                        <td><input type="text" name="first_name" id="first_name" class="regular-text" required></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="last_name">Cognome</label></th>
+                        <td><input type="text" name="last_name" id="last_name" class="regular-text" required></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="codice_fiscale">Codice Fiscale</label></th>
+                        <td><input type="text" name="codice_fiscale" id="codice_fiscale" class="regular-text" required></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="email">Email</label></th>
+                        <td><input type="email" name="email" id="email" class="regular-text" required></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="phone">Telefono</label></th>
+                        <td><input type="text" name="phone" id="phone" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="pf_address">Indirizzo personale</label></th>
+                        <td><input type="text" name="pf_address" id="pf_address" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="pf_city">Città</label></th>
+                        <td><input type="text" name="pf_city" id="pf_city" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="pf_postcode">CAP</label></th>
+                        <td><input type="text" name="pf_postcode" id="pf_postcode" class="regular-text"></td>
+                    </tr>
+
+                    <tr>
+                        <th><label for="pf_state">Provincia</label></th>
+                        <td><input type="text" name="pf_state" id="pf_state" class="regular-text"></td>
+                    </tr>
+                </table>
+
+                <p><button type="submit" class="button button-primary">Esegui Wizard</button></p>
+            </form>
         </div>
         <?php
     }
 
     /**
-     * Esecuzione Wizard
+     * Esecuzione del wizard
      */
-    public static function run_setup() {
+    public function run_wizard() {
 
-        update_option( 'woosolid_setup_done', 'running' );
-
-        self::setup_woocommerce();
-        self::create_woocommerce_pages();
-        self::create_registration_page();
-
-        self::setup_charitable();
-        self::create_charitable_pages();
-
-        self::create_ente_gestore();
-        self::create_demo_users();
-        self::create_demo_campaign();
-        self::create_demo_product();
-        self::create_demo_pickup();
-
-        update_option( 'woosolid_setup_done', 'yes' );
-    }
-
-    /**
-     * Configurazione WooCommerce (base)
-     */
-    protected static function setup_woocommerce() {
-
-        update_option( 'woocommerce_currency', 'EUR' );
-        update_option( 'woocommerce_default_country', 'IT:RM' );
-        update_option( 'woocommerce_currency_pos', 'right_space' );
-        update_option( 'woocommerce_price_num_decimals', '2' );
-        update_option( 'woocommerce_prices_include_tax', 'no' );
-
-        if ( ! get_option( 'woocommerce_email_from_address' ) ) {
-            update_option( 'woocommerce_email_from_address', 'info@woosolid.test' );
-        }
-        if ( ! get_option( 'woocommerce_email_from_name' ) ) {
-            update_option( 'woocommerce_email_from_name', 'WooSolid' );
-        }
-    }
-
-    /**
-     * Crea le pagine WooCommerce richieste
-     */
-    protected static function create_woocommerce_pages() {
-
-        // Negozio
-        if ( ! get_option( 'woocommerce_shop_page_id' ) ) {
-            $shop_id = wp_insert_post([
-                'post_title'   => 'Negozio',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-            ]);
-            update_option( 'woocommerce_shop_page_id', $shop_id );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( 'Non autorizzato.' );
         }
 
-        // Carrello
-        if ( ! get_option( 'woocommerce_cart_page_id' ) ) {
-            $cart_id = wp_insert_post([
-                'post_title'   => 'Carrello',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[woocommerce_cart]',
-            ]);
-            update_option( 'woocommerce_cart_page_id', $cart_id );
+        // Crea l'utente rappresentante legale
+        $email = sanitize_email( $_POST['email'] );
+        $password = wp_generate_password( 12, true );
+
+        $user_id = wp_create_user(
+            $email,
+            $password,
+            $email
+        );
+
+        if ( is_wp_error( $user_id ) ) {
+            wp_die( 'Errore nella creazione dell’utente rappresentante.' );
         }
 
-        // Checkout
-        if ( ! get_option( 'woocommerce_checkout_page_id' ) ) {
-            $checkout_id = wp_insert_post([
-                'post_title'   => 'Checkout',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[woocommerce_checkout]',
-            ]);
-            update_option( 'woocommerce_checkout_page_id', $checkout_id );
-        }
+        // Prepara i dati PF + PG
+        $data = [
+            // PF
+            'first_name'     => $_POST['first_name'],
+            'last_name'      => $_POST['last_name'],
+            'codice_fiscale' => $_POST['codice_fiscale'],
+            'phone'          => $_POST['phone'] ?? '',
+            'pf_address'     => $_POST['pf_address'] ?? '',
+            'pf_city'        => $_POST['pf_city'] ?? '',
+            'pf_postcode'    => $_POST['pf_postcode'] ?? '',
+            'pf_state'       => $_POST['pf_state'] ?? '',
+            'pf_country'     => 'IT',
 
-        // Il mio account
-        if ( ! get_option( 'woocommerce_myaccount_page_id' ) ) {
-            $account_id = wp_insert_post([
-                'post_title'   => 'Il mio account',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[woocommerce_my_account]',
-            ]);
-            update_option( 'woocommerce_myaccount_page_id', $account_id );
-        }
+            // PG
+            'company_name'     => $_POST['company_name'],
+            'company_type'     => $_POST['company_type'] ?? '',
+            'company_piva'     => $_POST['company_piva'] ?? '',
+            'company_cf'       => $_POST['company_cf'] ?? '',
+            'company_pec'      => $_POST['company_pec'] ?? '',
+            'company_sdi'      => $_POST['company_sdi'] ?? '',
+            'company_address'  => $_POST['company_address'] ?? '',
+            'company_city'     => $_POST['company_city'] ?? '',
+            'company_postcode' => $_POST['company_postcode'] ?? '',
+            'company_state'    => $_POST['company_state'] ?? '',
+            'company_country'  => 'IT',
 
-        // Termini e condizioni
-        if ( ! get_option( 'woocommerce_terms_page_id' ) ) {
-            $terms_id = wp_insert_post([
-                'post_title'   => 'Termini e condizioni',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => 'Questi sono i termini e le condizioni del servizio.',
-            ]);
-            update_option( 'woocommerce_terms_page_id', $terms_id );
-        }
+            // Flag
+            'user_type'             => 'persona_giuridica',
+            'is_org_representative' => 'yes',
+            'is_ente_gestore'       => 'yes',
+        ];
 
-        // Privacy Policy
-        if ( ! get_option( 'wp_page_for_privacy_policy' ) ) {
-            $privacy_id = wp_insert_post([
-                'post_title'   => 'Privacy Policy',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => 'Questa è la privacy policy del sito.',
-            ]);
-            update_option( 'wp_page_for_privacy_policy', $privacy_id );
-        }
-    }
+        // Salva tutto tramite UserMeta
+        WooSolid_User_Meta::save( $user_id, $data );
 
-    /**
-     * Crea pagina Registrazione e Accesso (WooCommerce)
-     */
-    protected static function create_registration_page() {
+        // Imposta ruolo customer
+        $user = new WP_User( $user_id );
+        $user->set_role( 'customer' );
 
-        if ( get_option( 'woosolid_registration_page_id' ) ) {
-            return;
-        }
-
-        $page_id = wp_insert_post([
-            'post_title'   => 'Registrazione e Accesso',
-            'post_type'    => 'page',
-            'post_status'  => 'publish',
-            'post_content' => '[woocommerce_my_account]',
-        ]);
-
-        if ( $page_id ) {
-            update_option( 'woosolid_registration_page_id', $page_id );
-        }
-    }
-
-    /**
-     * Configurazione Charitable (valuta, gateway, sync)
-     */
-    protected static function setup_charitable() {
-
-        update_option( 'charitable_currency', get_option( 'woocommerce_currency', 'EUR' ) );
-        update_option( 'charitable_currency_position', get_option( 'woocommerce_currency_pos', 'left' ) );
-        update_option( 'charitable_decimal_separator', get_option( 'woocommerce_price_decimal_sep', ',' ) );
-        update_option( 'charitable_thousands_separator', get_option( 'woocommerce_price_thousand_sep', '.' ) );
-        update_option( 'charitable_number_decimals', get_option( 'woocommerce_price_num_decimals', 2 ) );
-
-        // Stripe Charitable sandbox
-        update_option( 'charitable_active_gateways', [ 'stripe' ] );
-        update_option( 'charitable_default_gateway', 'stripe' );
-
-        update_option( 'charitable_stripe_enabled', 1 );
-        update_option( 'charitable_stripe_test_mode', 1 );
-        update_option( 'charitable_stripe_live_mode', 0 );
-
-        update_option( 'charitable_stripe_test_secret_key', 'sk_test_xxxxxxxxxxxxxxxxxxxxx' );
-        update_option( 'charitable_stripe_test_publishable_key', 'pk_test_xxxxxxxxxxxxxxxxxxxxx' );
-
-        update_option( 'charitable_stripe_live_secret_key', '' );
-        update_option( 'charitable_stripe_live_publishable_key', '' );
-
-        // Sync WooCommerce → Charitable
-        update_option( '_woosolid_charitable_sync', 'yes' );
-    }
-
-    /**
-     * Crea le pagine richieste da Charitable
-     */
-    protected static function create_charitable_pages() {
-
-        // Donazione completata
-        if ( ! get_option( 'charitable_donation_success_page' ) ) {
-            $success_id = wp_insert_post([
-                'post_title'   => 'Donazione completata',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[charitable_donation_receipt]',
-            ]);
-            update_option( 'charitable_donation_success_page', $success_id );
-        }
-
-        // Donazione fallita
-        if ( ! get_option( 'charitable_donation_failed_page' ) ) {
-            $failed_id = wp_insert_post([
-                'post_title'   => 'Donazione fallita',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => 'La tua donazione non è andata a buon fine.',
-            ]);
-            update_option( 'charitable_donation_failed_page', $failed_id );
-        }
-
-        // Archivio campagne
-        if ( ! get_option( 'charitable_campaigns_page_id' ) ) {
-            $archive_id = wp_insert_post([
-                'post_title'   => 'Campagne Solidali',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[charitable_campaigns]',
-            ]);
-            update_option( 'charitable_campaigns_page_id', $archive_id );
-        }
-
-        // Campagna singola
-        if ( ! get_option( 'charitable_single_campaign_page_id' ) ) {
-            $single_id = wp_insert_post([
-                'post_title'   => 'Dettaglio Campagna',
-                'post_type'    => 'page',
-                'post_status'  => 'publish',
-                'post_content' => '[charitable_single_campaign]',
-            ]);
-            update_option( 'charitable_single_campaign_page_id', $single_id );
-        }
-    }
-
-    /**
-     * Crea ente gestore (dati base)
-     */
-    protected static function create_ente_gestore() {
-
-        if ( ! get_option( '_woosolid_ente_nome' ) ) {
-            update_option( '_woosolid_ente_nome', 'Ente Solidale Demo' );
-        }
-
-        if ( ! get_option( '_woosolid_ente_email' ) ) {
-            update_option( '_woosolid_ente_email', 'ente.demo@example.com' );
-        }
-
-        if ( ! get_option( '_woosolid_ente_cf' ) ) {
-            update_option( '_woosolid_ente_cf', 'CFDEM00000000000' );
-        }
-
-        $ente_email = get_option( '_woosolid_ente_email' );
-        if ( $ente_email ) {
-            update_option( 'charitable_email_from_address', $ente_email );
-        }
-    }
-
-    /**
-     * Crea utenti demo: persona fisica e persona giuridica
-     */
-    protected static function create_demo_users() {
-
-        // Persona fisica
-        if ( ! email_exists( 'mario.rossi@example.com' ) ) {
-
-            $user_id = wp_create_user(
-                'mario.rossi',
-                wp_generate_password( 12, true ),
-                'mario.rossi@example.com'
-            );
-
-            if ( ! is_wp_error( $user_id ) ) {
-                wp_update_user([
-                    'ID'           => $user_id,
-                    'first_name'   => 'Mario',
-                    'last_name'    => 'Rossi',
-                    'display_name' => 'Mario Rossi',
-                ]);
-
-                update_user_meta( $user_id, 'billing_first_name', 'Mario' );
-                update_user_meta( $user_id, 'billing_last_name', 'Rossi' );
-                update_user_meta( $user_id, 'billing_email', 'mario.rossi@example.com' );
-                update_user_meta( $user_id, 'billing_address_1', 'Via di esempio 1' );
-                update_user_meta( $user_id, 'billing_city', 'Roma' );
-                update_user_meta( $user_id, 'billing_postcode', '00100' );
-                update_user_meta( $user_id, 'billing_country', 'IT' );
-                update_user_meta( $user_id, '_woosolid_user_type', 'persona_fisica' );
-            }
-        }
-
-        // Persona giuridica
-        if ( ! email_exists( 'associazione.demo@example.com' ) ) {
-
-            $user_id = wp_create_user(
-                'associazione.demo',
-                wp_generate_password( 12, true ),
-                'associazione.demo@example.com'
-            );
-
-            if ( ! is_wp_error( $user_id ) ) {
-                wp_update_user([
-                    'ID'           => $user_id,
-                    'display_name' => 'Associazione Demo',
-                ]);
-
-                update_user_meta( $user_id, 'billing_company', 'Associazione Demo' );
-                update_user_meta( $user_id, 'billing_email', 'associazione.demo@example.com' );
-                update_user_meta( $user_id, 'billing_address_1', 'Via delle Associazioni 10' );
-                update_user_meta( $user_id, 'billing_city', 'Roma' );
-                update_user_meta( $user_id, 'billing_postcode', '00100' );
-                update_user_meta( $user_id, 'billing_country', 'IT' );
-                update_user_meta( $user_id, '_woosolid_user_type', 'persona_giuridica' );
-            }
-        }
-    }
-
-    /**
-     * Crea campagna Charitable predefinita
-     */
-    protected static function create_demo_campaign() {
-
-        $campaign_id = get_option( '_woosolid_default_campaign_id' );
-
-        if ( $campaign_id && get_post( $campaign_id ) ) {
-            return;
-        }
-
-        $campaign_id = wp_insert_post([
-            'post_title'   => 'Campagna Solidale',
-            'post_type'    => 'campaign',
-            'post_status'  => 'publish',
-            'post_content' => 'Questa è la campagna solidale predefinita creata automaticamente dal wizard WooSolid.',
-        ]);
-
-        if ( $campaign_id ) {
-            update_option( '_woosolid_default_campaign_id', $campaign_id );
-        }
-    }
-
-    /**
-     * Crea prodotto demo "Pomodoro"
-     */
-    protected static function create_demo_product() {
-
-        $existing = get_posts([
-            'post_type'      => 'product',
-            'posts_per_page' => 1,
-            'meta_key'       => '_woosolid_demo_product',
-            'meta_value'     => 'yes',
-        ]);
-
-        if ( ! empty( $existing ) ) {
-            return;
-        }
-
-        // Immagine demo
-        $image_id = 0;
-        $image_url = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tomato_je.jpg';
-
-        if ( ! function_exists( 'media_sideload_image' ) ) {
-            require_once ABSPATH . 'wp-admin/includes/media.php';
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            require_once ABSPATH . 'wp-admin/includes/image.php';
-        }
-
-        $image_id = media_sideload_image( $image_url, 0, 'Pomodoro', 'id' );
-
-        // Prodotto
-        $product_id = wp_insert_post([
-            'post_title'   => 'Pomodoro',
-            'post_content' => 'Prodotto solidale di esempio generato automaticamente dal wizard WooSolid.',
-            'post_status'  => 'publish',
-            'post_type'    => 'product',
-        ]);
-
-        if ( ! $product_id ) {
-            return;
-        }
-
-        update_post_meta( $product_id, '_regular_price', '10' );
-        update_post_meta( $product_id, '_price', '10' );
-        update_post_meta( $product_id, '_sku', 'POM-001' );
-        update_post_meta( $product_id, '_manage_stock', 'no' );
-
-        update_post_meta( $product_id, '_woosolid_is_donation', 'yes' );
-        update_post_meta( $product_id, '_woosolid_is_transport', 'yes' );
-
-        $campaign_id = get_option( '_woosolid_default_campaign_id' );
-        if ( $campaign_id ) {
-            update_post_meta( $product_id, '_woosolid_campaign_id', $campaign_id );
-        }
-
-        if ( $image_id && ! is_wp_error( $image_id ) ) {
-            set_post_thumbnail( $product_id, $image_id );
-        }
-
-        update_post_meta( $product_id, '_woosolid_demo_product', 'yes' );
-    }
-
-    /**
-     * Crea un punto di ritiro demo
-     */
-    protected static function create_demo_pickup() {
-
-        $exists = get_posts([
-            'post_type'      => 'woosolid_pickup',
-            'posts_per_page' => 1,
-        ]);
-
-        if ( ! empty( $exists ) ) {
-            return;
-        }
-
-        $post_id = wp_insert_post([
-            'post_type'   => 'woosolid_pickup',
-            'post_title'  => 'Punto di ritiro demo',
-            'post_content'=> 'Questo è un punto di ritiro di esempio creato automaticamente dal wizard WooSolid.',
-            'post_status' => 'publish',
-        ]);
-
-        if ( $post_id ) {
-
-            update_post_meta( $post_id, '_woosolid_pickup_indirizzo', 'Via di esempio 123' );
-            update_post_meta( $post_id, '_woosolid_pickup_citta', 'Roma' );
-            update_post_meta( $post_id, '_woosolid_pickup_provincia', 'RM' );
-            update_post_meta( $post_id, '_woosolid_pickup_nazione', 'Italia' );
-            update_post_meta( $post_id, '_woosolid_pickup_orari', "Lun–Ven: 9:00–18:00\nSab: 9:00–13:00" );
-            update_post_meta( $post_id, '_woosolid_pickup_referente', 'Mario Rossi' );
-            update_post_meta( $post_id, '_woosolid_pickup_telefono', '+39 333 1234567' );
-        }
+        // Redirect
+        wp_redirect( admin_url( 'admin.php?page=woosolid-wizard&success=1' ) );
+        exit;
     }
 }
