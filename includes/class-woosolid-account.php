@@ -1,127 +1,91 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Account {
 
     public static function init() {
-        add_action( 'init', [ __CLASS__, 'add_endpoints' ] );
-        add_filter( 'query_vars', [ __CLASS__, 'add_query_vars' ] );
-        add_filter( 'woocommerce_account_menu_items', [ __CLASS__, 'add_menu_items' ] );
-        add_action( 'woocommerce_account_woosolid-donations_endpoint', [ __CLASS__, 'render_donations_endpoint' ] );
-        add_action( 'woocommerce_account_woosolid-direct-donation_endpoint', [ __CLASS__, 'render_direct_donation_endpoint' ] );
-        add_action( 'template_redirect', [ __CLASS__, 'handle_form_submission' ] );
+        add_filter( 'woocommerce_my_account_my_orders_columns', [ __CLASS__, 'add_consegna_column' ] );
+        add_action( 'woocommerce_my_account_my_orders_column_woosolid_consegna', [ __CLASS__, 'render_consegna_column' ] );
+        add_action( 'woocommerce_view_order', [ __CLASS__, 'view_order_delivery_box' ], 20 );
     }
 
-    public static function add_endpoints() {
-        add_rewrite_endpoint( 'woosolid-donations', EP_ROOT | EP_PAGES );
-        add_rewrite_endpoint( 'woosolid-direct-donation', EP_ROOT | EP_PAGES );
-    }
-
-    public static function add_query_vars( $vars ) {
-        $vars[] = 'woosolid-donations';
-        $vars[] = 'woosolid-direct-donation';
-        return $vars;
-    }
-
-    public static function add_menu_items( $items ) {
+    public static function add_consegna_column( $columns ) {
         $new = [];
-
-        foreach ( $items as $key => $label ) {
+        foreach ( $columns as $key => $label ) {
             $new[ $key ] = $label;
-
-            if ( 'edit-account' === $key ) {
-                $new['woosolid-donations']       = __( 'Le mie donazioni', 'woosolid' );
-                $new['woosolid-direct-donation'] = __( 'Fai una donazione', 'woosolid' );
+            if ( 'order-total' === $key ) {
+                $new['woosolid_consegna'] = 'Consegna';
             }
         }
-
         return $new;
     }
 
-    public static function render_donations_endpoint() {
-        if ( ! is_user_logged_in() ) {
-            echo '<p>' . esc_html__( 'Devi essere autenticato per visualizzare le tue donazioni.', 'woosolid' ) . '</p>';
+    public static function render_consegna_column( $order ) {
+
+        if ( ! $order instanceof WC_Order ) {
             return;
         }
 
-        $current_year   = (int) date_i18n( 'Y' );
-        $selected_year  = isset( $_GET['year'] ) ? (int) $_GET['year'] : $current_year;
-        ?>
-        <h3><?php esc_html_e( 'Le mie donazioni', 'woosolid' ); ?></h3>
+        $pickup_id = $order->get_meta( '_woosolid_pickup_id' );
+        $delivery  = $order->get_meta( '_woosolid_delivery_address' );
 
-        <form method="post">
-            <?php wp_nonce_field( 'woosolid_donation_summary', 'woosolid_donation_summary_nonce' ); ?>
-
-            <p>
-                <label for="woosolid_donation_year">
-                    <?php esc_html_e( 'Anno fiscale', 'woosolid' ); ?>
-                </label>
-                <select name="woosolid_donation_year" id="woosolid_donation_year">
-                    <?php
-                    for ( $y = $current_year; $y >= $current_year - 5; $y-- ) {
-                        printf(
-                            '<option value="%1$d"%2$s>%1$d</option>',
-                            $y,
-                            selected( $selected_year, $y, false )
-                        );
-                    }
-                    ?>
-                </select>
-            </p>
-
-            <p>
-                <button type="submit" name="woosolid_donation_summary_request" class="button">
-                    <?php esc_html_e( 'Invia riepilogo donazioni via email', 'woosolid' ); ?>
-                </button>
-            </p>
-        </form>
-        <?php
+        if ( $pickup_id ) {
+            echo 'Punto di ritiro';
+        } elseif ( ! empty( $delivery ) ) {
+            echo 'Consegna a domicilio';
+        } else {
+            echo '-';
+        }
     }
 
-    public static function render_direct_donation_endpoint() {
-        if ( ! is_user_logged_in() ) {
-            echo '<p>' . esc_html__( 'Devi essere autenticato per effettuare una donazione.', 'woosolid' ) . '</p>';
-            return;
-        }
+    public static function view_order_delivery_box( $order_id ) {
 
-        WooSolid_Direct_Donation::render_form();
-    }
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) return;
 
-    public static function handle_form_submission() {
-        if ( ! is_user_logged_in() ) {
-            return;
-        }
+        $pickup_id = $order->get_meta( '_woosolid_pickup_id' );
+        $delivery  = $order->get_meta( '_woosolid_delivery_address' );
 
-        if ( isset( $_POST['woosolid_donation_summary_request'] ) ) {
-            if ( ! isset( $_POST['woosolid_donation_summary_nonce'] ) || ! wp_verify_nonce( $_POST['woosolid_donation_summary_nonce'], 'woosolid_donation_summary' ) ) {
-                return;
+        echo '<section class="woocommerce-order-details woosolid-order-delivery">';
+        echo '<h2 class="woocommerce-order-details__title">Dettagli consegna</h2>';
+
+        if ( $pickup_id ) {
+
+            $post = get_post( $pickup_id );
+            if ( $post && $post->post_type === 'woosolid_pickup' ) {
+
+                $indirizzo = get_post_meta( $pickup_id, '_woosolid_pickup_indirizzo', true );
+                $citta     = get_post_meta( $pickup_id, '_woosolid_pickup_citta', true );
+                $provincia = get_post_meta( $pickup_id, '_woosolid_pickup_provincia', true );
+                $nazione   = get_post_meta( $pickup_id, '_woosolid_pickup_nazione', true );
+                $orari     = get_post_meta( $pickup_id, '_woosolid_pickup_orari', true );
+                $referente = get_post_meta( $pickup_id, '_woosolid_pickup_referente', true );
+                $telefono  = get_post_meta( $pickup_id, '_woosolid_pickup_telefono', true );
+
+                echo '<p><strong>Punto di ritiro:</strong><br>';
+                echo esc_html( get_the_title( $pickup_id ) ) . '<br>';
+                if ( $indirizzo ) echo esc_html( $indirizzo ) . '<br>';
+                if ( $citta || $provincia ) echo esc_html( trim( $citta . ' ' . $provincia ) ) . '<br>';
+                if ( $nazione ) echo esc_html( $nazione ) . '<br>';
+                if ( $orari ) echo '<br><strong>Orari:</strong> ' . nl2br( esc_html( $orari ) ) . '<br>';
+                if ( $referente ) echo '<strong>Referente:</strong> ' . esc_html( $referente ) . '<br>';
+                if ( $telefono ) echo '<strong>Telefono:</strong> ' . esc_html( $telefono ) . '<br>';
+                echo '</p>';
             }
 
-            $user_id = get_current_user_id();
-            $year    = isset( $_POST['woosolid_donation_year'] ) ? (int) $_POST['woosolid_donation_year'] : (int) date_i18n( 'Y' );
+        } elseif ( ! empty( $delivery ) ) {
 
-            $sent = WooSolid_Charitable::send_donation_summary_email( $user_id, $year );
+            echo '<p><strong>Consegna a domicilio:</strong><br>';
+            echo nl2br( esc_html( $delivery ) );
+            echo '</p>';
 
-            if ( $sent ) {
-                wc_add_notice(
-                    __( 'Il riepilogo delle tue donazioni è stato inviato al tuo indirizzo email.', 'woosolid' ),
-                    'success'
-                );
-            } else {
-                wc_add_notice(
-                    __( 'Si è verificato un problema durante l’invio del riepilogo donazioni.', 'woosolid' ),
-                    'error'
-                );
-            }
+        } else {
 
-            wp_safe_redirect( wc_get_account_endpoint_url( 'woosolid-donations' ) );
-            exit;
+            echo '<p><strong>Indirizzo di consegna:</strong><br>';
+            echo wp_kses_post( $order->get_formatted_shipping_address() );
+            echo '</p>';
         }
 
-        if ( isset( $_POST['woosolid_direct_donation_submit'] ) ) {
-            WooSolid_Direct_Donation::handle_submission();
-        }
+        echo '</section>';
     }
 }
