@@ -41,7 +41,7 @@ class WooSolid_Settings {
             [ __CLASS__, 'render_ente_gestore_page' ]
         );
 
-        // 3) LISTINI
+        // 3) LISTINI (callback gestita dalla classe WooSolid_Listino)
         add_submenu_page(
             'woosolid-settings',
             'Listini',
@@ -53,8 +53,19 @@ class WooSolid_Settings {
     }
 
     public static function register_settings() {
+
+        // Gruppo IMPOSTAZIONI
         register_setting( 'woosolid_settings_group', 'woosolid_enable_shipping' );
         register_setting( 'woosolid_settings_group', 'woosolid_enable_pickup' );
+
+        // Gruppo ENTE GESTORE
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_name' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_cf' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_email' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_phone' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_address' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_iban' );
+        register_setting( 'woosolid_ente_settings_group', 'woosolid_ente_notes' );
     }
 
     /**
@@ -95,8 +106,58 @@ class WooSolid_Settings {
      * Pagina ENTE GESTORE
      */
     public static function render_ente_gestore_page() {
-        echo '<div class="wrap"><h1>Ente gestore</h1>';
-        echo '<p>Qui andranno i dati dell\'ente gestore (ETS/GAS).</p>';
+
+        $data = [
+            'name'    => get_option( 'woosolid_ente_name', '' ),
+            'cf'      => get_option( 'woosolid_ente_cf', '' ),
+            'email'   => get_option( 'woosolid_ente_email', '' ),
+            'phone'   => get_option( 'woosolid_ente_phone', '' ),
+            'address' => get_option( 'woosolid_ente_address', '' ),
+            'iban'    => get_option( 'woosolid_ente_iban', '' ),
+            'notes'   => get_option( 'woosolid_ente_notes', '' ),
+        ];
+
+        echo '<div class="wrap">';
+        echo '<h1>Ente gestore</h1>';
+
+        echo '<form method="post" action="options.php">';
+        settings_fields( 'woosolid_ente_settings_group' );
+
+        echo '<table class="form-table">';
+
+        echo '<tr><th scope="row">Nome ente</th><td>';
+        echo '<input type="text" name="woosolid_ente_name" value="' . esc_attr( $data['name'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">Codice fiscale / P.IVA</th><td>';
+        echo '<input type="text" name="woosolid_ente_cf" value="' . esc_attr( $data['cf'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">Email amministrativa</th><td>';
+        echo '<input type="email" name="woosolid_ente_email" value="' . esc_attr( $data['email'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">Telefono</th><td>';
+        echo '<input type="text" name="woosolid_ente_phone" value="' . esc_attr( $data['phone'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">Indirizzo</th><td>';
+        echo '<input type="text" name="woosolid_ente_address" value="' . esc_attr( $data['address'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">IBAN</th><td>';
+        echo '<input type="text" name="woosolid_ente_iban" value="' . esc_attr( $data['iban'] ) . '" class="regular-text">';
+        echo '</td></tr>';
+
+        echo '<tr><th scope="row">Note interne</th><td>';
+        echo '<textarea name="woosolid_ente_notes" rows="4" class="large-text">' . esc_textarea( $data['notes'] ) . '</textarea>';
+        echo '</td></tr>';
+
+        echo '</table>';
+
+        submit_button();
+
+        echo '</form>';
         echo '</div>';
     }
 }
