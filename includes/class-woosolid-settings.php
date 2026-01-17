@@ -1,172 +1,102 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Settings {
 
     public static function init() {
-        add_action( 'admin_menu', [ __CLASS__, 'add_menu_pages' ] );
+        add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
+        add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
     }
 
-    /**
-     * MENU WOO SOLID
-     *
-     * WooSolid
-     *   └── Impostazioni
-     *         ├── Ente gestore
-     *         ├── Logistica
-     *         └── Listino
-     */
-    public static function add_menu_pages() {
+    public static function register_menu() {
 
-        // Menu principale WooSolid → Impostazioni
+        // MENU PRINCIPALE
         add_menu_page(
-            __( 'WooSolid', 'woosolid' ),
+            'WooSolid',
             'WooSolid',
             'manage_options',
             'woosolid-settings',
-            [ __CLASS__, 'render_main_page' ],
+            [ __CLASS__, 'render_settings_page' ],
             'dashicons-groups',
             56
         );
 
-        // Ente gestore
+        // 1) IMPOSTAZIONI
         add_submenu_page(
             'woosolid-settings',
-            __( 'Ente gestore', 'woosolid' ),
-            __( 'Ente gestore', 'woosolid' ),
+            'Impostazioni',
+            'Impostazioni',
             'manage_options',
-            'woosolid-ente',
-            [ 'WooSolid_Ente', 'render_page' ]
+            'woosolid-settings',
+            [ __CLASS__, 'render_settings_page' ]
         );
 
-        // Logistica (spedizione + punti di ritiro)
+        // 2) ENTE GESTORE
         add_submenu_page(
             'woosolid-settings',
-            __( 'Logistica', 'woosolid' ),
-            __( 'Logistica', 'woosolid' ),
+            'Ente gestore',
+            'Ente gestore',
             'manage_options',
-            'woosolid-logistica',
-            [ __CLASS__, 'render_logistica_page' ]
+            'woosolid-ente-gestore',
+            [ __CLASS__, 'render_ente_gestore_page' ]
         );
 
-        // Listino (importer CSV)
+        // 3) LISTINI
         add_submenu_page(
             'woosolid-settings',
-            __( 'Listino', 'woosolid' ),
-            __( 'Listino', 'woosolid' ),
+            'Listini',
+            'Listini',
             'manage_options',
-            'woosolid-importer',
-            [ 'WooSolid_Importer', 'render_page' ]
+            'woosolid-listino',
+            [ 'WooSolid_Listino', 'render_page' ]
         );
     }
 
-    /**
-     * Pagina principale WooSolid
-     */
-    public static function render_main_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php esc_html_e( 'Impostazioni WooSolid', 'woosolid' ); ?></h1>
-            <p><?php esc_html_e( 'Gestisci tutte le configurazioni del tuo Ente.', 'woosolid' ); ?></p>
-        </div>
-        <?php
+    public static function register_settings() {
+        register_setting( 'woosolid_settings_group', 'woosolid_enable_shipping' );
+        register_setting( 'woosolid_settings_group', 'woosolid_enable_pickup' );
     }
 
     /**
-     * Pagina Logistica (spedizione + punti di ritiro)
+     * Pagina IMPOSTAZIONI
      */
-    public static function render_logistica_page() {
+    public static function render_settings_page() {
 
-        if ( isset( $_POST['woosolid_logistica_submit'] ) && check_admin_referer( 'woosolid_logistica', 'woosolid_logistica_nonce' ) ) {
+        $enable_shipping = get_option( 'woosolid_enable_shipping', 'no' );
+        $enable_pickup   = get_option( 'woosolid_enable_pickup', 'no' );
 
-            update_option( 'woosolid_enable_shipping', isset( $_POST['woosolid_enable_shipping'] ) ? 'yes' : 'no' );
-            update_option( 'woosolid_enable_pickup', isset( $_POST['woosolid_enable_pickup'] ) ? 'yes' : 'no' );
+        echo '<div class="wrap">';
+        echo '<h1>Impostazioni WooSolid</h1>';
 
-            echo '<div class="updated"><p>' . esc_html__( 'Impostazioni logistica salvate.', 'woosolid' ) . '</p></div>';
-        }
+        echo '<form method="post" action="options.php">';
+        settings_fields( 'woosolid_settings_group' );
 
-        $shipping = get_option( 'woosolid_enable_shipping', 'yes' );
-        $pickup   = get_option( 'woosolid_enable_pickup', 'yes' );
-        ?>
+        echo '<table class="form-table">';
 
-        <div class="wrap">
-            <h1><?php esc_html_e( 'Logistica WooSolid', 'woosolid' ); ?></h1>
+        echo '<tr>';
+        echo '<th scope="row">Abilita spedizione</th>';
+        echo '<td><input type="checkbox" name="woosolid_enable_shipping" value="yes" ' . checked( $enable_shipping, 'yes', false ) . '> Abilita</td>';
+        echo '</tr>';
 
-            <form method="post">
-                <?php wp_nonce_field( 'woosolid_logistica', 'woosolid_logistica_nonce' ); ?>
+        echo '<tr>';
+        echo '<th scope="row">Abilita punti di ritiro</th>';
+        echo '<td><input type="checkbox" name="woosolid_enable_pickup" value="yes" ' . checked( $enable_pickup, 'yes', false ) . '> Abilita</td>';
+        echo '</tr>';
 
-                <table class="form-table">
-                    <tr>
-                        <th><?php esc_html_e( 'Abilita spedizione', 'woosolid' ); ?></th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="woosolid_enable_shipping" value="yes" <?php checked( $shipping, 'yes' ); ?> />
-                                <?php esc_html_e( 'Abilita', 'woosolid' ); ?>
-                            </label>
-                        </td>
-                    </tr>
+        echo '</table>';
 
-                    <tr>
-                        <th><?php esc_html_e( 'Abilita punti di ritiro', 'woosolid' ); ?></th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="woosolid_enable_pickup" value="yes" <?php checked( $pickup, 'yes' ); ?> />
-                                <?php esc_html_e( 'Abilita', 'woosolid' ); ?>
-                            </label>
-                        </td>
-                    </tr>
-                </table>
+        submit_button();
 
-                <?php submit_button( __( 'Salva impostazioni', 'woosolid' ), 'primary', 'woosolid_logistica_submit' ); ?>
-            </form>
+        echo '</form>';
+        echo '</div>';
+    }
 
-            <hr>
-
-            <h2><?php esc_html_e( 'Punti di ritiro', 'woosolid' ); ?></h2>
-
-            <p>
-                <a href="<?php echo admin_url( 'post-new.php?post_type=woosolid_pickup' ); ?>" class="button button-primary">
-                    <?php esc_html_e( 'Aggiungi nuovo punto di ritiro', 'woosolid' ); ?>
-                </a>
-            </p>
-
-            <?php
-            $pickup_posts = get_posts([
-                'post_type'      => 'woosolid_pickup',
-                'posts_per_page' => -1,
-                'orderby'        => 'title',
-                'order'          => 'ASC',
-            ]);
-
-            if ( empty( $pickup_posts ) ) {
-                echo '<p>' . esc_html__( 'Nessun punto di ritiro configurato.', 'woosolid' ) . '</p>';
-            } else {
-                echo '<table class="widefat striped">';
-                echo '<thead><tr>';
-                echo '<th>' . esc_html__( 'Nome', 'woosolid' ) . '</th>';
-                echo '<th>' . esc_html__( 'Indirizzo', 'woosolid' ) . '</th>';
-                echo '<th>' . esc_html__( 'Azioni', 'woosolid' ) . '</th>';
-                echo '</tr></thead><tbody>';
-
-                foreach ( $pickup_posts as $pickup ) {
-                    $address = get_post_meta( $pickup->ID, '_woosolid_pickup_address', true );
-                    echo '<tr>';
-                    echo '<td>' . esc_html( $pickup->post_title ) . '</td>';
-                    echo '<td>' . esc_html( $address ) . '</td>';
-                    echo '<td>';
-                    echo '<a href="' . admin_url( 'post.php?post=' . $pickup->ID . '&action=edit' ) . '">' . esc_html__( 'Modifica', 'woosolid' ) . '</a> | ';
-                    echo '<a href="' . get_delete_post_link( $pickup->ID ) . '">' . esc_html__( 'Elimina', 'woosolid' ) . '</a>';
-                    echo '</td>';
-                    echo '</tr>';
-                }
-
-                echo '</tbody></table>';
-            }
-            ?>
-        </div>
-
-        <?php
+    /**
+     * Pagina ENTE GESTORE
+     */
+    public static function render_ente_gestore_page() {
+        echo '<div class="wrap"><h1>Ente gestore</h1>';
+        echo '<p>Qui andranno i dati dell\'ente gestore (ETS/GAS).</p>';
+        echo '</div>';
     }
 }
