@@ -1,54 +1,125 @@
 <?php
 /**
  * Plugin Name: WooSolid
- * Description: Plugin di integrazione WooCommerce e Charitable
- * Author: Socialforge
- * Version: 2.0.0
+ * Description: Piattaforma di ecommerce mutualistico 
+ * Author: Socialforger
+ * Version: 1.0.0
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
-
-define( 'WOOSOLID_PATH', plugin_dir_path( __FILE__ ) );
-define( 'WOOSOLID_URL', plugin_dir_url( __FILE__ ) );
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 /**
- * Helpers
+ * Costanti base
  */
-require_once WOOSOLID_PATH . 'includes/helpers/class-woosolid-utils.php';
-require_once WOOSOLID_PATH . 'includes/helpers/class-woosolid-logger.php';
+define( 'WOOSOLID_VERSION', '2.0.0' );
+define( 'WOOSOLID_PLUGIN_FILE', __FILE__ );
+define( 'WOOSOLID_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'WOOSOLID_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 /**
- * Core Bootstrap
+ * Autoload minimale dei file includes
  */
-require_once WOOSOLID_PATH . 'includes/class-woosolid-bootstrap.php';
+function woosolid_load_includes() {
+
+    // Helpers
+    $helpers_dir = WOOSOLID_PLUGIN_DIR . 'includes/helpers/';
+    if ( is_dir( $helpers_dir ) ) {
+        foreach ( glob( $helpers_dir . '*.php' ) as $helper_file ) {
+            require_once $helper_file;
+        }
+    }
+
+    // Core classes
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-user-meta.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-registration.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-account-edit.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-account.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-wizard.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-woocommerce.php';
+    require_once WOOSOLID_PLUGIN_DIR . 'includes/class-woosolid-ente.php';
+
+    // Altri moduli esistenti
+    $optional_files = [
+        'class-woosolid-bootstrap.php',
+        'class-woosolid-charitable.php',
+        'class-woosolid-checkout.php',
+        'class-woosolid-emails.php',
+        'class-woosolid-gateway-cash.php',
+        'class-woosolid-importer.php',
+        'class-woosolid-listino.php',
+        'class-woosolid-pickup.php',
+        'class-woosolid-product-metabox.php',
+        'class-woosolid-settings.php',
+    ];
+
+    foreach ( $optional_files as $file ) {
+        $path = WOOSOLID_PLUGIN_DIR . 'includes/' . $file;
+        if ( file_exists( $path ) ) {
+            require_once $path;
+        }
+    }
+}
 
 /**
- * WooSolid Modules
+ * Bootstrap principale
  */
-require_once WOOSOLID_PATH . 'includes/class-woosolid-wizard.php';
-require_once WOOSOLID_PATH . 'includes/class-woosolid-registration.php';
-require_once WOOSOLID_PATH . 'includes/class-woosolid-account.php';
+function woosolid_init() {
 
-/**
- * Attivazione plugin
- */
-register_activation_hook( __FILE__, [ 'WooSolid_Bootstrap', 'activate' ] );
+    if ( ! class_exists( 'WooCommerce' ) ) {
+        return;
+    }
 
-/**
- * Inizializzazione plugin
- */
-add_action( 'plugins_loaded', function() {
+    woosolid_load_includes();
 
-    // Core
-    WooSolid_Bootstrap::init();
+    // Inizializzazione moduli core
+    new WooSolid_Registration();
+    new WooSolid_Account_Edit();
+    new WooSolid_Account();
+    new WooSolid_Wizard();
+    new WooSolid_WooCommerce();
 
-    // Wizard (pagina nascosta + run setup)
-    WooSolid_Wizard::init();
+    // Moduli opzionali se presenti
+    if ( class_exists( 'WooSolid_Bootstrap' ) ) {
+        new WooSolid_Bootstrap();
+    }
 
-    // Registrazione avanzata (vecchio modello WooSolid)
-    // NOTA: nel file class-woosolid-registration.php NON deve esserci un altro ::init()
-    WooSolid_Registration::init();
+    if ( class_exists( 'WooSolid_Charitable' ) ) {
+        new WooSolid_Charitable();
+    }
 
-    // Account (colonne ordini + dettagli consegna)
-    WooSolid_Account::init();
-});
+    if ( class_exists( 'WooSolid_Checkout' ) ) {
+        new WooSolid_Checkout();
+    }
+
+    if ( class_exists( 'WooSolid_Emails' ) ) {
+        new WooSolid_Emails();
+    }
+
+    if ( class_exists( 'WooSolid_Gateway_Cash' ) ) {
+        new WooSolid_Gateway_Cash();
+    }
+
+    if ( class_exists( 'WooSolid_Importer' ) ) {
+        new WooSolid_Importer();
+    }
+
+    if ( class_exists( 'WooSolid_Listino' ) ) {
+        new WooSolid_Listino();
+    }
+
+    if ( class_exists( 'WooSolid_Pickup' ) ) {
+        new WooSolid_Pickup();
+    }
+
+    if ( class_exists( 'WooSolid_Product_Metabox' ) ) {
+        new WooSolid_Product_Metabox();
+    }
+
+    if ( class_exists( 'WooSolid_Settings' ) ) {
+        new WooSolid_Settings();
+    }
+}
+
+add_action( 'plugins_loaded', 'woosolid_init', 20 );
