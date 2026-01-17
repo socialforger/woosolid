@@ -1,54 +1,61 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Pickup {
 
+    const CPT = 'woosolid_pickup';
+
     public static function init() {
-        add_action( 'init', [ __CLASS__, 'register_post_type' ] );
-        add_action( 'add_meta_boxes', [ __CLASS__, 'register_metaboxes' ] );
-        add_action( 'save_post_woosolid_pickup', [ __CLASS__, 'save_metabox' ] );
+        add_action( 'init', [ __CLASS__, 'register_cpt' ] );
+        add_action( 'add_meta_boxes', [ __CLASS__, 'add_metaboxes' ] );
+        add_action( 'save_post_' . self::CPT, [ __CLASS__, 'save_meta' ], 10, 2 );
     }
 
-    public static function register_post_type() {
+    /**
+     * CPT Punti di ritiro
+     */
+    public static function register_cpt() {
 
         $labels = [
-            'name'               => __( 'Punti di ritiro', 'woosolid' ),
-            'singular_name'      => __( 'Punto di ritiro', 'woosolid' ),
-            'menu_name'          => __( 'Punti di ritiro', 'woosolid' ),
-            'add_new'            => __( 'Aggiungi nuovo', 'woosolid' ),
-            'add_new_item'       => __( 'Aggiungi punto di ritiro', 'woosolid' ),
-            'edit_item'          => __( 'Modifica punto di ritiro', 'woosolid' ),
-            'new_item'           => __( 'Nuovo punto di ritiro', 'woosolid' ),
-            'view_item'          => __( 'Visualizza punto di ritiro', 'woosolid' ),
-            'search_items'       => __( 'Cerca punti di ritiro', 'woosolid' ),
-            'not_found'          => __( 'Nessun punto di ritiro trovato', 'woosolid' ),
-            'not_found_in_trash' => __( 'Nessun punto di ritiro nel cestino', 'woosolid' ),
+            'name'               => 'Punti di ritiro',
+            'singular_name'      => 'Punto di ritiro',
+            'add_new'            => 'Aggiungi punto di ritiro',
+            'add_new_item'       => 'Aggiungi nuovo punto di ritiro',
+            'edit_item'          => 'Modifica punto di ritiro',
+            'new_item'           => 'Nuovo punto di ritiro',
+            'view_item'          => 'Visualizza punto di ritiro',
+            'search_items'       => 'Cerca punti di ritiro',
+            'not_found'          => 'Nessun punto di ritiro trovato',
+            'not_found_in_trash' => 'Nessun punto di ritiro nel cestino',
+            'menu_name'          => 'Punti di ritiro',
         ];
 
         $args = [
             'labels'             => $labels,
             'public'             => false,
             'show_ui'            => true,
-            'show_in_menu'       => false, // Gestito da Logistica
-            'supports'           => [ 'title', 'editor' ],
+            'show_in_menu'       => 'woosolid-settings',
             'capability_type'    => 'post',
+            'hierarchical'       => false,
+            'supports'           => [ 'title', 'editor' ], // niente featured image
             'has_archive'        => false,
-            'rewrite'            => false,
+            'menu_position'      => null,
         ];
 
-        register_post_type( 'woosolid_pickup', $args );
+        register_post_type( self::CPT, $args );
     }
 
-    public static function register_metaboxes() {
+    /**
+     * Metabox
+     */
+    public static function add_metaboxes() {
         add_meta_box(
             'woosolid_pickup_details',
-            __( 'Dettagli punto di ritiro', 'woosolid' ),
+            'Dettagli punto di ritiro',
             [ __CLASS__, 'render_metabox' ],
-            'woosolid_pickup',
+            self::CPT,
             'normal',
-            'default'
+            'high'
         );
     }
 
@@ -56,36 +63,50 @@ class WooSolid_Pickup {
 
         wp_nonce_field( 'woosolid_pickup_save', 'woosolid_pickup_nonce' );
 
-        $indirizzo = get_post_meta( $post->ID, '_woosolid_pickup_address', true );
-        $orari     = get_post_meta( $post->ID, '_woosolid_pickup_hours', true );
-        $contatto  = get_post_meta( $post->ID, '_woosolid_pickup_contact', true );
-        ?>
+        $indirizzo = get_post_meta( $post->ID, '_woosolid_pickup_indirizzo', true );
+        $citta     = get_post_meta( $post->ID, '_woosolid_pickup_citta', true );
+        $provincia = get_post_meta( $post->ID, '_woosolid_pickup_provincia', true );
+        $nazione   = get_post_meta( $post->ID, '_woosolid_pickup_nazione', true );
+        $orari     = get_post_meta( $post->ID, '_woosolid_pickup_orari', true );
+        $referente = get_post_meta( $post->ID, '_woosolid_pickup_referente', true );
+        $telefono  = get_post_meta( $post->ID, '_woosolid_pickup_telefono', true );
 
-        <p>
-            <label><strong><?php esc_html_e( 'Indirizzo', 'woosolid' ); ?></strong></label><br>
-            <input type="text" class="widefat" name="woosolid_pickup_address" value="<?php echo esc_attr( $indirizzo ); ?>">
-        </p>
+        echo '<table class="form-table">';
 
-        <p>
-            <label><strong><?php esc_html_e( 'Orari di ritiro', 'woosolid' ); ?></strong></label><br>
-            <textarea class="widefat" name="woosolid_pickup_hours" rows="3"><?php echo esc_textarea( $orari ); ?></textarea>
-        </p>
+        echo '<tr><th><label for="woosolid_pickup_indirizzo">Indirizzo</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_indirizzo" name="woosolid_pickup_indirizzo" value="' . esc_attr( $indirizzo ) . '">';
+        echo '</td></tr>';
 
-        <p>
-            <label><strong><?php esc_html_e( 'Contatto', 'woosolid' ); ?></strong></label><br>
-            <input type="text" class="widefat" name="woosolid_pickup_contact" value="<?php echo esc_attr( $contatto ); ?>">
-        </p>
+        echo '<tr><th><label for="woosolid_pickup_citta">Città</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_citta" name="woosolid_pickup_citta" value="' . esc_attr( $citta ) . '">';
+        echo '</td></tr>';
 
-        <?php
+        echo '<tr><th><label for="woosolid_pickup_provincia">Provincia</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_provincia" name="woosolid_pickup_provincia" value="' . esc_attr( $provincia ) . '">';
+        echo '</td></tr>';
+
+        echo '<tr><th><label for="woosolid_pickup_nazione">Nazione</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_nazione" name="woosolid_pickup_nazione" value="' . esc_attr( $nazione ) . '">';
+        echo '</td></tr>';
+
+        echo '<tr><th><label for="woosolid_pickup_orari">Orari</label></th><td>';
+        echo '<textarea class="large-text" rows="3" id="woosolid_pickup_orari" name="woosolid_pickup_orari">' . esc_textarea( $orari ) . '</textarea>';
+        echo '</td></tr>';
+
+        echo '<tr><th><label for="woosolid_pickup_referente">Referente</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_referente" name="woosolid_pickup_referente" value="' . esc_attr( $referente ) . '">';
+        echo '</td></tr>';
+
+        echo '<tr><th><label for="woosolid_pickup_telefono">Telefono</label></th><td>';
+        echo '<input type="text" class="regular-text" id="woosolid_pickup_telefono" name="woosolid_pickup_telefono" value="' . esc_attr( $telefono ) . '">';
+        echo '</td></tr>';
+
+        echo '</table>';
     }
 
-    public static function save_metabox( $post_id ) {
+    public static function save_meta( $post_id, $post ) {
 
-        if ( ! isset( $_POST['woosolid_pickup_nonce'] ) ) {
-            return;
-        }
-
-        if ( ! wp_verify_nonce( $_POST['woosolid_pickup_nonce'], 'woosolid_pickup_save' ) ) {
+        if ( ! isset( $_POST['woosolid_pickup_nonce'] ) || ! wp_verify_nonce( $_POST['woosolid_pickup_nonce'], 'woosolid_pickup_save' ) ) {
             return;
         }
 
@@ -93,8 +114,28 @@ class WooSolid_Pickup {
             return;
         }
 
-        update_post_meta( $post_id, '_woosolid_pickup_address', sanitize_text_field( $_POST['woosolid_pickup_address'] ?? '' ) );
-        update_post_meta( $post_id, '_woosolid_pickup_hours', sanitize_textarea_field( $_POST['woosolid_pickup_hours'] ?? '' ) );
-        update_post_meta( $post_id, '_woosolid_pickup_contact', sanitize_text_field( $_POST['woosolid_pickup_contact'] ?? '' ) );
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $fields = [
+            'indirizzo' => '_woosolid_pickup_indirizzo',
+            'citta'     => '_woosolid_pickup_citta',
+            'provincia' => '_woosolid_pickup_provincia',
+            'nazione'   => '_woosolid_pickup_nazione',
+            'orari'     => '_woosolid_pickup_orari',
+            'referente' => '_woosolid_pickup_referente',
+            'telefono'  => '_woosolid_pickup_telefono',
+        ];
+
+        foreach ( $fields as $field => $meta_key ) {
+            if ( isset( $_POST[ 'woosolid_pickup_' . $field ] ) ) {
+                update_post_meta(
+                    $post_id,
+                    $meta_key,
+                    sanitize_text_field( wp_unslash( $_POST[ 'woosolid_pickup_' . $field ] ) )
+                );
+            }
+        }
     }
 }
