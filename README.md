@@ -1,4 +1,4 @@
 # WooSolid
-Plugin di integrazione tra Woocommerce, Woocommerce Stripe Gateway, Charitable, Blocksy, Blocksy Companion
+Piattaforma di ecommerce mutualistico basata su Woocommerce e Charitable
 
 
