@@ -1,15 +1,4 @@
 # WooSolid
-Plugin per Woocommerce
+Plugin di integrazione tra Woocommerce, Woocommerce Stripe Gateway, Charitable, Blocksy, Blocksy Companion
 
-  # Plugins
-- WooCommerce
-- Charitable
-- Flexible Shipping
-- Kadence WooCommerce Email Designer
-- WooCommerce Stripe Gateway	
-- Local Pickup for WooCommerce 
-- Blocksy Companion
-
-  # Tema
-- Blocksy
 
