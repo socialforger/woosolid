@@ -7,9 +7,11 @@ class WooSolid_Bootstrap {
      * Attivazione plugin
      */
     public static function activate() {
-        // Wizard automatico invisibile
-        WooSolid_Wizard::run_auto_wizard();
-        update_option( 'woosolid_setup_done', 'yes' ); // il wizard non deve più comparire
+
+        // Il wizard non deve più comparire come pagina
+        update_option( 'woosolid_setup_done', 'yes' );
+
+        // NON eseguiamo il wizard qui (causa fatal se le classi non sono ancora caricate)
         flush_rewrite_rules();
     }
 
@@ -18,21 +20,24 @@ class WooSolid_Bootstrap {
      */
     public static function init() {
 
-        // Dipendenze obbligatorie
+        // Controllo dipendenze
         if ( ! WooSolid_Utils::is_woocommerce_active() || ! WooSolid_Utils::is_charitable_active() ) {
             add_action( 'admin_notices', [ __CLASS__, 'admin_notice_missing_dependencies' ] );
             return;
         }
 
+        // Carica tutte le classi
         self::includes();
+
+        // Inizializza i moduli
         self::init_modules();
 
-        // Wizard automatico anche all’avvio
+        // Wizard automatico invisibile (ora che TUTTO è caricato)
         WooSolid_Wizard::run_auto_wizard();
     }
 
     /**
-     * Carica tutte le classi del plugin (come l’originale)
+     * Include di tutte le classi del plugin
      */
     protected static function includes() {
 
@@ -42,7 +47,7 @@ class WooSolid_Bootstrap {
         // Wizard aggiornato (invisibile)
         require_once WOOSOLID_PATH . 'includes/class-woosolid-wizard.php';
 
-        // Moduli originali (tutti ancora esistenti)
+        // Classi originali (tutte ancora esistenti)
         require_once WOOSOLID_PATH . 'includes/class-woosolid-settings.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-charitable.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-listino.php';
@@ -57,11 +62,11 @@ class WooSolid_Bootstrap {
     }
 
     /**
-     * Inizializza i moduli (come l’originale)
+     * Inizializzazione moduli
      */
     protected static function init_modules() {
 
-        // Admin-only modules
+        // Moduli admin
         if ( is_admin() ) {
             WooSolid_Admin_Menu::init();   // nuovo menu WooSolid
             WooSolid_Settings::init();
