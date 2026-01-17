@@ -3,11 +3,19 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Bootstrap {
 
+    /**
+     * Attivazione plugin
+     */
     public static function activate() {
-        update_option( 'woosolid_setup_done', 'no' );
+        // Wizard automatico invisibile
+        WooSolid_Wizard::run_auto_wizard();
+        update_option( 'woosolid_setup_done', 'yes' ); // il wizard non deve più comparire
         flush_rewrite_rules();
     }
 
+    /**
+     * Inizializzazione plugin
+     */
     public static function init() {
 
         // Dipendenze obbligatorie
@@ -19,30 +27,27 @@ class WooSolid_Bootstrap {
         self::includes();
         self::init_modules();
 
-        add_action( 'admin_init', [ __CLASS__, 'maybe_redirect_to_wizard' ] );
+        // Wizard automatico anche all’avvio
+        WooSolid_Wizard::run_auto_wizard();
     }
 
-    public static function maybe_redirect_to_wizard() {
-        if ( get_option( 'woosolid_setup_done' ) === 'no' ) {
-            if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'woosolid-wizard' ) {
-                wp_safe_redirect( admin_url( 'admin.php?page=woosolid-wizard' ) );
-                exit;
-            }
-        }
-    }
-
+    /**
+     * Carica tutte le classi del plugin (come l’originale)
+     */
     protected static function includes() {
 
-        require_once WOOSOLID_PATH . 'includes/class-woosolid-settings.php';
+        // Menu WooSolid (nuovo)
+        require_once WOOSOLID_PATH . 'includes/class-woosolid-admin-menu.php';
+
+        // Wizard aggiornato (invisibile)
         require_once WOOSOLID_PATH . 'includes/class-woosolid-wizard.php';
 
-        require_once WOOSOLID_PATH . 'includes/class-woosolid-charitable.php'; // 🔥 fondamentale
-
+        // Moduli originali (tutti ancora esistenti)
+        require_once WOOSOLID_PATH . 'includes/class-woosolid-settings.php';
+        require_once WOOSOLID_PATH . 'includes/class-woosolid-charitable.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-listino.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-importer.php';
-
         require_once WOOSOLID_PATH . 'includes/class-woosolid-gateway-cash.php';
-
         require_once WOOSOLID_PATH . 'includes/class-woosolid-account.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-pickup.php';
         require_once WOOSOLID_PATH . 'includes/class-woosolid-checkout.php';
@@ -51,17 +56,21 @@ class WooSolid_Bootstrap {
         require_once WOOSOLID_PATH . 'includes/class-woosolid-emails.php';
     }
 
+    /**
+     * Inizializza i moduli (come l’originale)
+     */
     protected static function init_modules() {
 
+        // Admin-only modules
         if ( is_admin() ) {
+            WooSolid_Admin_Menu::init();   // nuovo menu WooSolid
             WooSolid_Settings::init();
-            WooSolid_Wizard::init();
             WooSolid_Listino::init();
             WooSolid_Importer::init();
         }
 
-        WooSolid_Charitable::init(); // 🔥 sincronizzazione WooCommerce → Charitable
-
+        // Moduli frontend + backend
+        WooSolid_Charitable::init();
         WooSolid_Account::init();
         WooSolid_Pickup::init();
         WooSolid_Checkout::init();
@@ -70,6 +79,9 @@ class WooSolid_Bootstrap {
         WooSolid_Emails::init();
     }
 
+    /**
+     * Notifica dipendenze mancanti
+     */
     public static function admin_notice_missing_dependencies() {
         ?>
         <div class="notice notice-error">
