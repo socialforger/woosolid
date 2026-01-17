@@ -1,6 +1,327 @@
-# WooSolid POT template
 msgid ""
 msgstr ""
 "Project-Id-Version: WooSolid 1.0.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-17 12:30+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: WooSolid\n"
+"X-Domain: woosolid\n"
+
+#: includes/class-woosolid-wizard.php:10
+msgid "WooSolid – Configurazione iniziale"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:11
+msgid "WooSolid – Configurazione iniziale dello shop ETS/GAS"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:33
+msgid "WooSolid – Configurazione iniziale"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:34
+msgid "Completa questi dati per attivare WooSolid in modalità ETS/GAS e configurare lo shop."
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:42
+msgid "Dati ETS"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:47
+msgid "Denominazione ETS"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:53
+msgid "Codice Fiscale ETS"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:59
+msgid "Email ETS per ordini e rettifiche"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:66
+msgid "Logistica"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:71
+msgid "Abilita spedizione"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:76
+#: includes/class-woosolid-wizard.php:86
+msgid "Abilita"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:81
+msgid "Abilita punti di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:91
+msgid "Pagamenti"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:92
+msgid "WooSolid configurerà Stripe in modalità sandbox e il bonifico bancario come seconda modalità di pagamento."
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:97
+msgid "Stripe Test Publishable Key"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:103
+msgid "Stripe Test Secret Key"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:109
+msgid "IBAN per bonifico bancario"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:115
+msgid "BIC/SWIFT per bonifico bancario"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:121
+msgid "Completa configurazione"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:157
+msgid "Carta di credito (Stripe Sandbox)"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:158
+msgid "Pagamento sicuro tramite Stripe in modalità test."
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:171
+msgid "Bonifico bancario"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:172
+msgid "Puoi effettuare il pagamento tramite bonifico bancario. Riceverai le coordinate dopo la conferma dell’ordine."
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:173
+msgid "Effettua il bonifico alle coordinate indicate. L’ordine sarà processato dopo la verifica del pagamento."
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:182
+msgid "Ente del Terzo Settore"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:184
+msgid "Banca Etica"
+msgstr ""
+
+#: includes/class-woosolid-wizard.php:262
+msgid "My account"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:20
+msgid "Importa dati WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:21
+msgid "Importa"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:32
+msgid "Importazione dati WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:33
+msgid "Carica un file CSV per importare prodotti solidali, campagne o punti di ritiro."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:40
+msgid "Tipo di importazione"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:44
+msgid "Prodotti solidali"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:45
+msgid "Campagne Charitable"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:46
+msgid "Punti di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:52
+msgid "File CSV"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:60
+msgid "Importa"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:71
+msgid "Permessi insufficienti."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:77
+msgid "Nonce non valido."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:82
+msgid "Nessun file caricato."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:89
+msgid "Il file CSV è vuoto o non valido."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:104
+msgid "Tipo di importazione non valido."
+msgstr ""
+
+#: includes/class-woosolid-importer.php:190
+msgid "Risultato importazione"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:192
+msgid "Creati:"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:193
+msgid "Aggiornati:"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:197
+msgid "Errori"
+msgstr ""
+
+#: includes/class-woosolid-importer.php:206
+msgid "Torna all’importazione"
+msgstr ""
+
+#: includes/class-woosolid-pickup.php:10
+msgid "Punto di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-pickup.php:11
+msgid "Punti di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-pickup.php:30
+msgid "Indirizzo punto di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-pickup.php:31
+msgid "Orari punto di ritiro"
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:20
+msgid "Donazione solidale"
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:21
+msgid "Donazioni solidali"
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:80
+msgid "Ordine n."
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:120
+msgid "Campagna"
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:121
+msgid "Importo donazione"
+msgstr ""
+
+#: includes/class-woosolid-woocommerce.php:122
+msgid "Causale"
+msgstr ""
+
+#: includes/class-woosolid-settings.php:15
+msgid "Impostazioni WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-settings.php:16
+msgid "WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-settings.php:30
+msgid "Impostazioni generali WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-settings.php:35
+msgid "Abilita WooSolid"
+msgstr ""
+
+#: includes/class-woosolid-settings.php:40
+msgid "Salva impostazioni"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:20
+msgid "Impostazioni prodotto solidale"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:30
+msgid "Abilita fee solidale per questo prodotto"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:35
+msgid "Campagna collegata"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:40
+msgid "Modalità fee"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:41
+msgid "Fissa"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:42
+msgid "Percentuale"
+msgstr ""
+
+#: includes/class-woosolid-product-metabox.php:47
+msgid "Importo fee"
+msgstr ""
+
+#: includes/class-woosolid-account.php:20
+msgid "Le mie donazioni"
+msgstr ""
+
+#: includes/class-woosolid-account.php:21
+msgid "Fai una donazione"
+msgstr ""
+
+#: includes/class-woosolid-account.php:60
+msgid "Nessuna donazione trovata."
+msgstr ""
+
+#: includes/class-woosolid-account.php:90
+msgid "Importo"
+msgstr ""
+
+#: includes/class-woosolid-account.php:91
+msgid "Data"
+msgstr ""
+
+#: includes/class-woosolid-account.php:92
+msgid "Stato"
+msgstr ""
+
+#: includes/class-woosolid-account.php:120
+msgid "Donazione nominativa"
+msgstr ""
+
+#: includes/class-woosolid-account.php:121
+msgid "Donazione anonima"
+msgstr ""
+
+#: includes/class-woosolid-account.php:130
+msgid "Invia donazione"
+msgstr ""
