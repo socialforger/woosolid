@@ -7,9 +7,6 @@ class WooSolid_Importer {
         add_action( 'admin_post_woosolid_upload_listino', [ __CLASS__, 'handle_upload' ] );
     }
 
-    /**
-     * Gestione upload + importazione prodotti
-     */
     public static function handle_upload() {
 
         if ( ! current_user_can( 'manage_options' ) ) {
@@ -17,58 +14,62 @@ class WooSolid_Importer {
         }
 
         if ( ! isset( $_FILES['woosolid_listino'] ) ) {
-            wp_redirect( add_query_arg( 'msg', 'nofile', wp_get_referer() ) );
+            wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=nofile' ) );
             exit;
         }
 
         $file = $_FILES['woosolid_listino'];
 
         if ( $file['error'] !== UPLOAD_ERR_OK ) {
-            wp_redirect( add_query_arg( 'msg', 'uploaderror', wp_get_referer() ) );
+            wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=uploaderror' ) );
             exit;
         }
 
-        // Estensione
         $ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
 
-        if ( ! in_array( $ext, [ 'csv', 'xls', 'xlsx' ] ) ) {
-            wp_redirect( add_query_arg( 'msg', 'invalidformat', wp_get_referer() ) );
+        if ( ! in_array( $ext, [ 'csv', 'xls', 'xlsx' ], true ) ) {
+            wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=invalidformat' ) );
             exit;
         }
 
-        // Cartella upload
         $upload_dir = wp_upload_dir();
-        $dir = $upload_dir['basedir'] . '/woosolid/listini/';
+        $dir        = trailingslashit( $upload_dir['basedir'] ) . 'woosolid/listini/';
 
         if ( ! file_exists( $dir ) ) {
             wp_mkdir_p( $dir );
         }
 
-        // Nome file CSV finale
         $filename = 'listino_' . date( 'Ymd_His' ) . '.csv';
         $filepath = $dir . $filename;
 
-        // Se è già CSV → lo copiamo direttamente
+        // CSV diretto
         if ( $ext === 'csv' ) {
 
-            move_uploaded_file( $file['tmp_name'], $filepath );
+            if ( ! move_uploaded_file( $file['tmp_name'], $filepath ) ) {
+                wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=uploaderror' ) );
+                exit;
+            }
 
         } else {
 
-            // XLS o XLSX → conversione in CSV
-            if ( ! class_exists( 'SimpleXLSX' ) ) {
-                require_once plugin_dir_path( __FILE__ ) . 'lib/simplexlsx.class.php';
-            }
-            if ( ! class_exists( 'SimpleXLS' ) ) {
-                require_once plugin_dir_path( __FILE__ ) . 'lib/simplexls.class.php';
-            }
-
+            // XLS/XLSX → CSV
             if ( $ext === 'xlsx' ) {
+                if ( ! class_exists( 'SimpleXLSX' ) ) {
+                    require_once plugin_dir_path( __FILE__ ) . 'lib/simplexlsx.class.php';
+                }
                 $xlsx = SimpleXLSX::parse( $file['tmp_name'] );
                 $rows = $xlsx ? $xlsx->rows() : [];
             } else {
+                if ( ! class_exists( 'SimpleXLS' ) ) {
+                    require_once plugin_dir_path( __FILE__ ) . 'lib/simplexls.class.php';
+                }
                 $xls  = SimpleXLS::parse( $file['tmp_name'] );
                 $rows = $xls ? $xls->rows() : [];
+            }
+
+            if ( empty( $rows ) ) {
+                wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=empty' ) );
+                exit;
             }
 
             $fp = fopen( $filepath, 'w' );
@@ -78,30 +79,25 @@ class WooSolid_Importer {
             fclose( $fp );
         }
 
-        // Lettura CSV
-        $rows = array_map( function( $line ) {
-            return str_getcsv( $line, ';' );
-        }, file( $filepath ) );
-
-        if ( empty( $rows ) ) {
-            wp_redirect( add_query_arg( 'msg', 'empty', wp_get_referer() ) );
+        // Lettura CSV finale
+        $lines = @file( $filepath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+        if ( ! $lines ) {
+            wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=empty' ) );
             exit;
         }
 
-        // Header
-        $header = array_map( 'trim', $rows[0] );
+        $rows   = array_map( fn( $line ) => str_getcsv( $line, ';' ), $lines );
+        $header = array_map( 'trim', $rows[0] ?? [] );
 
         $expected = [ 'sku', 'nome', 'descrizione', 'prezzo', 'categoria', 'quantita', 'note' ];
         $missing  = array_diff( $expected, $header );
 
         if ( ! empty( $missing ) ) {
-            wp_redirect( add_query_arg( 'msg', 'badheader', wp_get_referer() ) );
+            wp_redirect( admin_url( 'admin.php?page=woosolid-listino&msg=badheader' ) );
             exit;
         }
 
-        $indexes = array_flip( $header );
-
-        // IMPORTAZIONE PRODOTTI
+        $indexes  = array_flip( $header );
         $imported = 0;
 
         foreach ( $rows as $index => $row ) {
@@ -119,7 +115,6 @@ class WooSolid_Importer {
 
             if ( $sku === '' || $nome === '' ) continue;
 
-            // Cerca prodotto esistente tramite SKU
             $existing_id = wc_get_product_id_by_sku( $sku );
 
             if ( $existing_id ) {
@@ -129,15 +124,14 @@ class WooSolid_Importer {
                 $product->set_sku( $sku );
             }
 
-            // Dati base
             $product->set_name( $nome );
             $product->set_description( $descrizione );
 
-            if ( is_numeric( str_replace( ',', '.', $prezzo ) ) ) {
-                $product->set_regular_price( str_replace( ',', '.', $prezzo ) );
+            $prezzo_norm = str_replace( ',', '.', $prezzo );
+            if ( is_numeric( $prezzo_norm ) ) {
+                $product->set_regular_price( $prezzo_norm );
             }
 
-            // Categoria
             if ( $categoria ) {
                 $term = term_exists( $categoria, 'product_cat' );
                 if ( ! $term ) {
@@ -148,13 +142,11 @@ class WooSolid_Importer {
                 }
             }
 
-            // Quantità → stock
             if ( $quantita !== '' && is_numeric( $quantita ) ) {
                 $product->set_manage_stock( true );
-                $product->set_stock_quantity( intval( $quantita ) );
+                $product->set_stock_quantity( (int) $quantita );
             }
 
-            // Note → descrizione breve
             if ( $note ) {
                 $product->set_short_description( $note );
             }
@@ -163,8 +155,12 @@ class WooSolid_Importer {
             $imported++;
         }
 
-        // Salva metadati listino
-        $listini   = get_option( 'woosolid_listini', [] );
+        // Salvataggio metadati listino
+        $listini = get_option( 'woosolid_listini', [] );
+        if ( ! is_array( $listini ) ) {
+            $listini = [];
+        }
+
         $listini[] = [
             'id'        => time(),
             'filename'  => $filename,
@@ -172,9 +168,9 @@ class WooSolid_Importer {
             'products'  => $imported,
             'active'    => true,
         ];
+
         update_option( 'woosolid_listini', $listini );
 
-        // Redirect alla pagina prodotti WooCommerce
         wp_redirect( admin_url( 'edit.php?post_type=product&woosolid_import=ok' ) );
         exit;
     }
