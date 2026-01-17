@@ -40,37 +40,18 @@ class WooSolid_Wizard {
             return;
         }
 
-        $ets_name   = get_option( 'woosolid_ets_name', '' );
-        $ets_cf     = get_option( 'woosolid_ets_cf', '' );
-        $ets_email  = get_option( 'woosolid_ets_email', '' );
-        $shipping   = get_option( 'woosolid_enable_shipping', 'yes' );
-        $pickup     = get_option( 'woosolid_enable_pickup', 'yes' );
+        $shipping = get_option( 'woosolid_enable_shipping', 'yes' );
+        $pickup   = get_option( 'woosolid_enable_pickup', 'yes' );
         ?>
         <div class="wrap">
             <h1><?php esc_html_e( 'WooSolid – Configurazione iniziale', 'woosolid' ); ?></h1>
-            <p><?php esc_html_e( 'Completa questi dati per attivare WooSolid in modalità ETS/GAS e configurare lo shop.', 'woosolid' ); ?></p>
+            <p><?php esc_html_e( 'Questo wizard configura WooCommerce, Charitable e crea alcune entità demo per iniziare.', 'woosolid' ); ?></p>
 
             <form method="post">
                 <?php wp_nonce_field( 'woosolid_wizard', 'woosolid_wizard_nonce' ); ?>
 
-                <h2><?php esc_html_e( 'Dati ETS', 'woosolid' ); ?></h2>
-
-                <table class="form-table">
-                    <tr>
-                        <th><label for="woosolid_ets_name"><?php esc_html_e( 'Denominazione ETS', 'woosolid' ); ?></label></th>
-                        <td><input type="text" name="woosolid_ets_name" id="woosolid_ets_name" class="regular-text" value="<?php echo esc_attr( $ets_name ); ?>"></td>
-                    </tr>
-                    <tr>
-                        <th><label for="woosolid_ets_cf"><?php esc_html_e( 'Codice Fiscale ETS', 'woosolid' ); ?></label></th>
-                        <td><input type="text" name="woosolid_ets_cf" id="woosolid_ets_cf" class="regular-text" value="<?php echo esc_attr( $ets_cf ); ?>"></td>
-                    </tr>
-                    <tr>
-                        <th><label for="woosolid_ets_email"><?php esc_html_e( 'Email ETS per ordini e rettifiche', 'woosolid' ); ?></label></th>
-                        <td><input type="email" name="woosolid_ets_email" id="woosolid_ets_email" class="regular-text" value="<?php echo esc_attr( $ets_email ); ?>"></td>
-                    </tr>
-                </table>
-
                 <h2><?php esc_html_e( 'Logistica', 'woosolid' ); ?></h2>
+                <p><?php esc_html_e( 'Definisci il modello logistico di base. Potrai modificarlo in qualsiasi momento dal pannello WooSolid → Logistica.', 'woosolid' ); ?></p>
 
                 <table class="form-table">
                     <tr>
@@ -126,37 +107,32 @@ class WooSolid_Wizard {
     }
 
     protected static function handle_submit() {
-        $ets_name   = sanitize_text_field( $_POST['woosolid_ets_name'] ?? '' );
-        $ets_cf     = sanitize_text_field( $_POST['woosolid_ets_cf'] ?? '' );
-        $ets_email  = sanitize_email( $_POST['woosolid_ets_email'] ?? '' );
-        $shipping   = isset( $_POST['woosolid_enable_shipping'] ) ? 'yes' : 'no';
-        $pickup     = isset( $_POST['woosolid_enable_pickup'] ) ? 'yes' : 'no';
+        $shipping  = isset( $_POST['woosolid_enable_shipping'] ) ? 'yes' : 'no';
+        $pickup    = isset( $_POST['woosolid_enable_pickup'] ) ? 'yes' : 'no';
 
-        $stripe_pk  = sanitize_text_field( $_POST['woosolid_stripe_pk'] ?? '' );
-        $stripe_sk  = sanitize_text_field( $_POST['woosolid_stripe_sk'] ?? '' );
-        $bacs_iban  = sanitize_text_field( $_POST['woosolid_bacs_iban'] ?? '' );
-        $bacs_bic   = sanitize_text_field( $_POST['woosolid_bacs_bic'] ?? '' );
+        $stripe_pk = sanitize_text_field( $_POST['woosolid_stripe_pk'] ?? '' );
+        $stripe_sk = sanitize_text_field( $_POST['woosolid_stripe_sk'] ?? '' );
+        $bacs_iban = sanitize_text_field( $_POST['woosolid_bacs_iban'] ?? '' );
+        $bacs_bic  = sanitize_text_field( $_POST['woosolid_bacs_bic'] ?? '' );
 
-        update_option( 'woosolid_ets_name', $ets_name );
-        update_option( 'woosolid_ets_cf', $ets_cf );
-        update_option( 'woosolid_ets_email', $ets_email );
         update_option( 'woosolid_enable_shipping', $shipping );
         update_option( 'woosolid_enable_pickup', $pickup );
 
-        self::configure_woocommerce_shop( $ets_name, $ets_email );
+        // Configurazioni automatiche
+        self::configure_woocommerce_shop();
         self::configure_shipping_and_pickup( $shipping, $pickup );
-        self::configure_payments( $ets_name, $stripe_pk, $stripe_sk, $bacs_iban, $bacs_bic );
+        self::configure_payments( $stripe_pk, $stripe_sk, $bacs_iban, $bacs_bic );
         self::configure_charitable();
         self::create_required_pages();
         self::create_demo_entities();
 
         update_option( 'woosolid_setup_done', 'yes' );
 
-        wp_safe_redirect( admin_url( 'admin.php?page=woosolid-settings' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=woosolid-ente' ) );
         exit;
     }
 
-    protected static function configure_woocommerce_shop( $ets_name, $ets_email ) {
+    protected static function configure_woocommerce_shop() {
         // Localizzazione Italia / Roma / Lazio
         update_option( 'woocommerce_default_country', 'IT:RM' );
         update_option( 'woocommerce_store_city', 'Roma' );
@@ -175,70 +151,54 @@ class WooSolid_Wizard {
 
         // Tasse disattivate (ETS)
         update_option( 'woocommerce_calc_taxes', 'no' );
-
-        // Email ETS come destinatario ordini
-        if ( $ets_email ) {
-            $new_order_settings = get_option( 'woocommerce_new_order_settings', [] );
-            if ( ! is_array( $new_order_settings ) ) {
-                $new_order_settings = [];
-            }
-            $new_order_settings['recipient'] = $ets_email;
-            update_option( 'woocommerce_new_order_settings', $new_order_settings );
-        }
-
-        if ( $ets_name ) {
-            update_option( 'blogname', $ets_name );
-        }
     }
 
     protected static function configure_shipping_and_pickup( $shipping, $pickup ) {
-        if ( 'yes' === $pickup ) {
-            // Crea una zona di spedizione "Ritiro"
-            if ( class_exists( 'WC_Shipping_Zones' ) ) {
-                $zones = WC_Shipping_Zones::get_zones();
-                $pickup_zone_id = 0;
+        if ( 'yes' === $pickup && class_exists( 'WC_Shipping_Zones' ) ) {
+            $zones          = WC_Shipping_Zones::get_zones();
+            $pickup_zone_id = 0;
 
-                foreach ( $zones as $zone ) {
-                    if ( isset( $zone['zone_name'] ) && 'Ritiro' === $zone['zone_name'] ) {
-                        $pickup_zone_id = (int) $zone['zone_id'];
+            foreach ( $zones as $zone ) {
+                if ( isset( $zone['zone_name'] ) && 'Ritiro' === $zone['zone_name'] ) {
+                    $pickup_zone_id = (int) $zone['zone_id'];
+                    break;
+                }
+            }
+
+            if ( ! $pickup_zone_id ) {
+                $zone = new WC_Shipping_Zone();
+                $zone->set_zone_name( 'Ritiro' );
+                $pickup_zone_id = $zone->save();
+            }
+
+            if ( $pickup_zone_id ) {
+                $zone      = new WC_Shipping_Zone( $pickup_zone_id );
+                $methods   = $zone->get_shipping_methods( true );
+                $has_pickup = false;
+
+                foreach ( $methods as $method ) {
+                    if ( 'woosolid_pickup' === $method->id ) {
+                        $has_pickup = true;
                         break;
                     }
                 }
 
-                if ( ! $pickup_zone_id ) {
-                    $zone = new WC_Shipping_Zone();
-                    $zone->set_zone_name( 'Ritiro' );
-                    $pickup_zone_id = $zone->save();
-                }
-
-                if ( $pickup_zone_id ) {
-                    $zone = new WC_Shipping_Zone( $pickup_zone_id );
-                    $methods = $zone->get_shipping_methods( true );
-                    $has_pickup = false;
-
-                    foreach ( $methods as $method ) {
-                        if ( 'woosolid_pickup' === $method->id ) {
-                            $has_pickup = true;
-                            break;
-                        }
-                    }
-
-                    if ( ! $has_pickup ) {
-                        $zone->add_shipping_method( 'woosolid_pickup' );
-                    }
+                if ( ! $has_pickup ) {
+                    $zone->add_shipping_method( 'woosolid_pickup' );
                 }
             }
         }
 
         if ( 'no' === $shipping ) {
-            // Disattiva metodi standard WooCommerce
             update_option( 'woocommerce_flat_rate_settings', [ 'enabled' => 'no' ] );
             update_option( 'woocommerce_free_shipping_settings', [ 'enabled' => 'no' ] );
             update_option( 'woocommerce_local_pickup_settings', [ 'enabled' => 'no' ] );
         }
     }
 
-    protected static function configure_payments( $ets_name, $stripe_pk, $stripe_sk, $bacs_iban, $bacs_bic ) {
+    protected static function configure_payments( $stripe_pk, $stripe_sk, $bacs_iban, $bacs_bic ) {
+        $ente_name = get_option( 'woosolid_ente_denominazione', __( 'Ente di prova', 'woosolid' ) );
+
         // Stripe sandbox
         $stripe_settings = [
             'enabled'              => 'yes',
@@ -248,7 +208,7 @@ class WooSolid_Wizard {
             'test_publishable_key' => $stripe_pk ? $stripe_pk : 'INSERISCI_LA_TUA_PK_TEST',
             'test_secret_key'      => $stripe_sk ? $stripe_sk : 'INSERISCI_LA_TUA_SK_TEST',
             'capture'              => 'yes',
-            'statement_descriptor' => $ets_name ? $ets_name : 'WooSolid',
+            'statement_descriptor' => $ente_name ? $ente_name : 'WooSolid',
         ];
         update_option( 'woocommerce_stripe_settings', $stripe_settings );
 
@@ -263,7 +223,7 @@ class WooSolid_Wizard {
 
         $bacs_accounts = [
             [
-                'account_name'   => $ets_name ? $ets_name : __( 'Ente del Terzo Settore', 'woosolid' ),
+                'account_name'   => $ente_name ? $ente_name : __( 'Ente del Terzo Settore', 'woosolid' ),
                 'account_number' => $bacs_iban ? $bacs_iban : 'IT00X0000000000000000000000',
                 'bank_name'      => __( 'Banca Etica', 'woosolid' ),
                 'sort_code'      => '',
@@ -273,22 +233,17 @@ class WooSolid_Wizard {
         ];
         update_option( 'woocommerce_bacs_accounts', $bacs_accounts );
 
-        // Ordine gateway: Stripe, poi Bonifico
         update_option( 'woocommerce_gateway_order', [ 'stripe', 'bacs' ] );
-
-        // Disattiva altri gateway WooCommerce
         update_option( 'woocommerce_cod_settings', [ 'enabled' => 'no' ] );
         update_option( 'woocommerce_cheque_settings', [ 'enabled' => 'no' ] );
     }
 
     protected static function configure_charitable() {
-        // Disattiva gateway Charitable
         update_option( 'charitable_settings_gateways', [
             'offline' => [ 'enabled' => 0 ],
             'paypal'  => [ 'enabled' => 0 ],
         ] );
 
-        // Disattiva form di donazione nativi
         $charitable_settings = get_option( 'charitable_settings', [] );
         if ( ! is_array( $charitable_settings ) ) {
             $charitable_settings = [];
@@ -303,10 +258,9 @@ class WooSolid_Wizard {
     }
 
     protected static function create_required_pages() {
-        // WooCommerce pages (if missing)
         if ( function_exists( 'wc_create_page' ) ) {
             if ( ! get_option( 'woocommerce_myaccount_page_id' ) ) {
-                $myaccount_id = wc_create_page(
+                wc_create_page(
                     esc_sql( _x( 'my-account', 'page_slug', 'woocommerce' ) ),
                     'woocommerce_myaccount_page_id',
                     __( 'My account', 'woocommerce' ),
@@ -314,14 +268,16 @@ class WooSolid_Wizard {
                 );
             }
         }
-
-        // Le mie donazioni e Fai una donazione sono endpoint WooSolid, non servono pagine dedicate
-        // ma se vuoi una pagina "Riepilogo fiscale" puoi crearla qui in futuro.
     }
 
     protected static function create_demo_entities() {
+        // Ente gestore demo
+        if ( ! get_option( 'woosolid_ente_denominazione' ) ) {
+            update_option( 'woosolid_ente_denominazione', 'Ente di prova' );
+        }
+
         // Campagna demo
-        $campaign_id = 0;
+        $campaign_id       = 0;
         $existing_campaign = get_page_by_title( 'Campagna Solidale Demo', OBJECT, 'campaign' );
         if ( $existing_campaign ) {
             $campaign_id = $existing_campaign->ID;
