@@ -1,105 +1,85 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 class WooSolid_Emails {
 
     public static function init() {
-        add_action( 'woocommerce_order_status_processing', [ __CLASS__, 'send_initial_order' ], 20, 1 );
-        add_action( 'woocommerce_update_order', [ __CLASS__, 'send_rectification' ], 20, 1 );
+        // Estendibile per email ETS aggiuntive
     }
 
-    public static function send_initial_order( $order_id ) {
-        $order = wc_get_order( $order_id );
-        if ( ! $order ) return;
+    public static function send_donation_summary_email( $user, $donations, $year ) {
+        $to = $user->user_email;
 
-        $settings = WooSolid_Settings::get_settings();
-        $to       = $settings['woosolid_ets_email'];
-        if ( ! $to ) return;
+        if ( ! $to ) {
+            return false;
+        }
 
         $subject = sprintf(
-            __( 'Ordine %s del %s', 'woosolid' ),
-            $order->get_order_number(),
-            $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd/m/Y' ) : ''
+            __( 'Riepilogo donazioni anno %d', 'woosolid' ),
+            $year
         );
 
-        $body = self::build_order_email_body( $order );
+        $name = trim( $user->first_name . ' ' . $user->last_name );
+        if ( '' === $name ) {
+            $name = $user->display_name;
+        }
 
-        wp_mail( $to, $subject, $body, [ 'Content-Type: text/html; charset=UTF-8' ] );
-    }
+        $body  = '';
+        $body .= sprintf( __( 'Gentile %s,', 'woosolid' ), $name ) . "\n\n";
+        $body .= sprintf(
+            __( 'di seguito trova il riepilogo delle donazioni effettuate nell’anno %d.', 'woosolid' ),
+            $year
+        ) . "\n\n";
 
-    public static function send_rectification( $order_id ) {
-        $order = wc_get_order( $order_id );
-        if ( ! $order ) return;
+        if ( empty( $donations ) ) {
+            $body .= __( 'Non risultano donazioni registrate per l’anno selezionato.', 'woosolid' ) . "\n\n";
+        } else {
+            $body .= __( 'DONAZIONI NOMINATIVE', 'woosolid' ) . "\n";
+            $body .= "----------------------------------------\n";
 
-        $settings = WooSolid_Settings::get_settings();
-        $to       = $settings['woosolid_ets_email'];
-        if ( ! $to ) return;
+            $total = 0;
 
-        $original_date = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd/m/Y' ) : '';
+            foreach ( $donations as $donation ) {
+                $date          = date_i18n( 'd/m/Y', strtotime( $donation['date'] ) );
+                $amount        = number_format_i18n( $donation['amount'], 2 );
+                $campaign_name = $donation['campaign_name'] ?: __( 'Campagna sconosciuta', 'woosolid' );
+                $note          = $donation['note'];
 
-        $subject = sprintf(
-            __( 'rettifica ordine %s del %s – sostituisce il precedente invio', 'woosolid' ),
-            $order->get_order_number(),
-            $original_date
-        );
+                $body .= sprintf( __( 'Data: %s', 'woosolid' ), $date ) . "\n";
+                $body .= sprintf( __( 'Campagna: %s', 'woosolid' ), $campaign_name ) . "\n";
+                $body .= sprintf( __( 'Importo: € %s', 'woosolid' ), $amount ) . "\n";
+                if ( $note ) {
+                    $body .= sprintf( __( 'Causale: %s', 'woosolid' ), $note ) . "\n";
+                }
+                $body .= "\n";
 
-        $body = self::build_order_email_body( $order );
+                $total += (float) $donation['amount'];
+            }
 
-        wp_mail( $to, $subject, $body, [ 'Content-Type: text/html; charset=UTF-8' ] );
-    }
+            $body .= "----------------------------------------\n";
+            $body .= sprintf(
+                __( 'Totale donazioni anno %d: € %s', 'woosolid' ),
+                $year,
+                number_format_i18n( $total, 2 )
+            ) . "\n\n";
+        }
 
-    private static function build_order_email_body( $order ) {
-        ob_start();
-        ?>
-        <h2><?php printf( esc_html__( 'Ordine %s', 'woosolid' ), esc_html( $order->get_order_number() ) ); ?></h2>
-        <p>
-            <?php esc_html_e( 'Data:', 'woosolid' ); ?>
-            <?php echo esc_html( $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd/m/Y H:i' ) : '' ); ?>
-        </p>
-        <h3><?php esc_html_e( 'Dettaglio prodotti', 'woosolid' ); ?></h3>
-        <table cellspacing="0" cellpadding="6" border="1" style="border-collapse: collapse; width: 100%;">
-            <thead>
-                <tr>
-                    <th><?php esc_html_e( 'Prodotto', 'woosolid' ); ?></th>
-                    <th><?php esc_html_e( 'Quantità', 'woosolid' ); ?></th>
-                    <th><?php esc_html_e( 'Totale', 'woosolid' ); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ( $order->get_items() as $item ) : ?>
-                <tr>
-                    <td><?php echo esc_html( $item->get_name() ); ?></td>
-                    <td><?php echo esc_html( $item->get_quantity() ); ?></td>
-                    <td><?php echo wp_kses_post( $order->get_formatted_line_subtotal( $item ) ); ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <p>
-            <?php esc_html_e( 'Totale ordine:', 'woosolid' ); ?>
-            <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?>
-        </p>
-        <?php
-        $fee = (float) $order->get_meta( '_woosolid_fee_solidale' );
-        if ( $fee > 0 ) : ?>
-            <p>
-                <?php esc_html_e( 'Fee solidale:', 'woosolid' ); ?>
-                <?php echo esc_html( wc_price( $fee ) ); ?>
-            </p>
-        <?php endif;
+        $body .= __( 'Questa comunicazione è valida ai fini fiscali secondo la normativa vigente sulle erogazioni liberali.', 'woosolid' ) . "\n\n";
 
-        $pickup_point = get_post_meta( $order->get_id(), '_woosolid_pickup_point', true );
-        $pickup_time  = get_post_meta( $order->get_id(), '_woosolid_pickup_time', true );
-        if ( $pickup_point || $pickup_time ) : ?>
-            <h3><?php esc_html_e( 'Ritiro', 'woosolid' ); ?></h3>
-            <?php if ( $pickup_point ) : ?>
-                <p><?php esc_html_e( 'Punto di ritiro:', 'woosolid' ); ?> <?php echo esc_html( $pickup_point ); ?></p>
-            <?php endif; ?>
-            <?php if ( $pickup_time ) : ?>
-                <p><?php esc_html_e( 'Orario di ritiro:', 'woosolid' ); ?> <?php echo esc_html( $pickup_time ); ?></p>
-            <?php endif; ?>
-        <?php endif;
+        $ets_name = get_option( 'woosolid_ets_name' );
+        $ets_cf   = get_option( 'woosolid_ets_cf' );
 
-        return ob_get_clean();
+        if ( $ets_name ) {
+            $body .= $ets_name . "\n";
+        }
+        if ( $ets_cf ) {
+            $body .= sprintf( __( 'Codice Fiscale: %s', 'woosolid' ), $ets_cf ) . "\n";
+        }
+
+        $headers = [ 'Content-Type: text/plain; charset=UTF-8' ];
+
+        return wp_mail( $to, $subject, $body, $headers );
     }
 }
