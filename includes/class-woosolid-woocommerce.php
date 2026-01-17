@@ -1,36 +1,72 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 class WooSolid_WooCommerce {
 
     public static function init() {
-        add_filter( 'woocommerce_shipping_rate_label', [ __CLASS__, 'rename_local_pickup' ], 10, 2 );
-        add_filter( 'woocommerce_package_rates', [ __CLASS__, 'filter_shipping_methods' ], 10, 1 );
+        add_action( 'woocommerce_checkout_create_order', [ __CLASS__, 'store_donations_in_order' ], 20, 2 );
     }
 
-    public static function rename_local_pickup( $label, $rate ) {
-        if ( $rate->method_id === 'local_pickup' ) {
-            return __( 'Ritiro presso Punto di ritiro', 'woosolid' );
-        }
-        return $label;
-    }
+    public static function store_donations_in_order( $order, $data ) {
+        $items = $order->get_items();
 
-    public static function filter_shipping_methods( $rates ) {
-        $settings = WooSolid_Settings::get_settings();
+        $fee_by_campaign = [];
 
-        $enable_shipping = ! empty( $settings['enable_shipping'] );
-        $enable_pickup   = ! empty( $settings['enable_pickup_points'] );
-
-        foreach ( $rates as $rate_id => $rate ) {
-            if ( $rate->method_id === 'local_pickup' && ! $enable_pickup ) {
-                unset( $rates[ $rate_id ] );
+        foreach ( $items as $item ) {
+            $product = $item->get_product();
+            if ( ! $product ) {
+                continue;
             }
 
-            if ( $rate->method_id !== 'local_pickup' && ! $enable_shipping ) {
-                unset( $rates[ $rate_id ] );
+            $product_id  = $product->get_id();
+            $campaign_id = get_post_meta( $product_id, '_woosolid_campaign_id', true );
+
+            if ( ! $campaign_id ) {
+                continue;
             }
+
+            $fee_mode   = get_post_meta( $product_id, '_woosolid_fee_mode', true );
+            $fee_amount = (float) get_post_meta( $product_id, '_woosolid_fee_amount', true );
+
+            if ( $fee_amount <= 0 ) {
+                continue;
+            }
+
+            $qty        = $item->get_quantity();
+            $line_total = (float) $item->get_total();
+
+            if ( 'percent' === $fee_mode ) {
+                $fee = ( $line_total * $fee_amount / 100 );
+            } else {
+                $fee = $fee_amount * $qty;
+            }
+
+            if ( $fee <= 0 ) {
+                continue;
+            }
+
+            if ( ! isset( $fee_by_campaign[ $campaign_id ] ) ) {
+                $fee_by_campaign[ $campaign_id ] = 0;
+            }
+
+            $fee_by_campaign[ $campaign_id ] += $fee;
         }
 
-        return $rates;
+        if ( ! empty( $fee_by_campaign ) ) {
+            $donations = [
+                'fee' => [],
+            ];
+
+            foreach ( $fee_by_campaign as $campaign_id => $amount ) {
+                $donations['fee'][] = [
+                    'campaign_id' => $campaign_id,
+                    'amount'      => $amount,
+                ];
+            }
+
+            $order->update_meta_data( '_woosolid_donations', $donations );
+        }
     }
 }
