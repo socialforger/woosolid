@@ -3,88 +3,101 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_Account {
 
-    public static function init() {
-        add_filter( 'woocommerce_my_account_my_orders_columns', [ __CLASS__, 'add_consegna_column' ] );
-        add_action( 'woocommerce_my_account_my_orders_column_woosolid_consegna', [ __CLASS__, 'render_consegna_column' ] );
-        add_action( 'woocommerce_view_order', [ __CLASS__, 'view_order_delivery_box' ], 20 );
+    public function __construct() {
+
+        // Aggiunge una sezione personalizzata in "Il mio account"
+        add_action( 'woocommerce_account_dashboard', [ $this, 'render_account_summary' ] );
+
+        // Aggiunge colonna personalizzata nella lista ordini
+        add_filter( 'woocommerce_my_account_my_orders_columns', [ $this, 'add_orders_column' ] );
+
+        // Contenuto della colonna personalizzata
+        add_action( 'woocommerce_my_account_my_orders_column_consegna', [ $this, 'render_orders_column' ] );
+
+        // Aggiunge box "Dettagli consegna" nella pagina ordine
+        add_action( 'woocommerce_order_details_after_order_table', [ $this, 'render_order_delivery_details' ] );
     }
 
-    public static function add_consegna_column( $columns ) {
-        $new = [];
-        foreach ( $columns as $key => $label ) {
-            $new[ $key ] = $label;
-            if ( 'order-total' === $key ) {
-                $new['woosolid_consegna'] = 'Consegna';
+    /**
+     * Sezione personalizzata nella dashboard "Il mio account"
+     */
+    public function render_account_summary() {
+
+        $user_id = get_current_user_id();
+        $meta = WooSolid_User_Meta::get( $user_id );
+
+        echo '<h3 class="woosolid-section-title">Profilo WooSolid</h3>';
+
+        echo '<p><strong>Tipo utente:</strong> ' . esc_html( $meta['user_type'] ) . '</p>';
+
+        if ( $meta['is_org_representative'] === 'yes' ) {
+
+            echo '<h4>Dati Organizzazione</h4>';
+
+            echo '<p><strong>Ragione Sociale:</strong> ' . esc_html( $meta['company_name'] ) . '</p>';
+            echo '<p><strong>P.IVA:</strong> ' . esc_html( $meta['company_piva'] ) . '</p>';
+            echo '<p><strong>CF Ente:</strong> ' . esc_html( $meta['company_cf'] ) . '</p>';
+            echo '<p><strong>PEC:</strong> ' . esc_html( $meta['company_pec'] ) . '</p>';
+            echo '<p><strong>SDI:</strong> ' . esc_html( $meta['company_sdi'] ) . '</p>';
+
+            echo '<p><strong>Sede Legale:</strong><br>' .
+                esc_html( $meta['company_address'] ) . ', ' .
+                esc_html( $meta['company_postcode'] ) . ' ' .
+                esc_html( $meta['company_city'] ) . ' (' .
+                esc_html( $meta['company_state'] ) . ')</p>';
+
+            if ( $meta['is_ente_gestore'] === 'yes' ) {
+                echo '<p><strong>Ente Gestore:</strong> Sì</p>';
             }
         }
-        return $new;
     }
 
-    public static function render_consegna_column( $order ) {
+    /**
+     * Aggiunge colonna "Consegna" nella lista ordini
+     */
+    public function add_orders_column( $columns ) {
+        $new_columns = [];
 
-        if ( ! $order instanceof WC_Order ) {
+        foreach ( $columns as $key => $label ) {
+            $new_columns[$key] = $label;
+
+            if ( $key === 'order-total' ) {
+                $new_columns['consegna'] = 'Consegna';
+            }
+        }
+
+        return $new_columns;
+    }
+
+    /**
+     * Contenuto della colonna "Consegna"
+     */
+    public function render_orders_column( $order ) {
+
+        $pickup = $order->get_meta( '_woosolid_pickup_point' );
+
+        if ( ! empty( $pickup ) ) {
+            echo esc_html( $pickup );
+        } else {
+            echo '<em>Nessuna</em>';
+        }
+    }
+
+    /**
+     * Box "Dettagli consegna" nella pagina ordine
+     */
+    public function render_order_delivery_details( $order ) {
+
+        $pickup = $order->get_meta( '_woosolid_pickup_point' );
+
+        if ( empty( $pickup ) ) {
             return;
         }
 
-        $pickup_id = $order->get_meta( '_woosolid_pickup_id' );
-        $delivery  = $order->get_meta( '_woosolid_delivery_address' );
+        echo '<section class="woocommerce-order-details woosolid-delivery-box">';
+        echo '<h2 class="woocommerce-order-details__title">Dettagli Consegna</h2>';
 
-        if ( $pickup_id ) {
-            echo 'Punto di ritiro';
-        } elseif ( ! empty( $delivery ) ) {
-            echo 'Consegna a domicilio';
-        } else {
-            echo '-';
-        }
-    }
-
-    public static function view_order_delivery_box( $order_id ) {
-
-        $order = wc_get_order( $order_id );
-        if ( ! $order ) return;
-
-        $pickup_id = $order->get_meta( '_woosolid_pickup_id' );
-        $delivery  = $order->get_meta( '_woosolid_delivery_address' );
-
-        echo '<section class="woocommerce-order-details woosolid-order-delivery">';
-        echo '<h2 class="woocommerce-order-details__title">Dettagli consegna</h2>';
-
-        if ( $pickup_id ) {
-
-            $post = get_post( $pickup_id );
-            if ( $post && $post->post_type === 'woosolid_pickup' ) {
-
-                $indirizzo = get_post_meta( $pickup_id, '_woosolid_pickup_indirizzo', true );
-                $citta     = get_post_meta( $pickup_id, '_woosolid_pickup_citta', true );
-                $provincia = get_post_meta( $pickup_id, '_woosolid_pickup_provincia', true );
-                $nazione   = get_post_meta( $pickup_id, '_woosolid_pickup_nazione', true );
-                $orari     = get_post_meta( $pickup_id, '_woosolid_pickup_orari', true );
-                $referente = get_post_meta( $pickup_id, '_woosolid_pickup_referente', true );
-                $telefono  = get_post_meta( $pickup_id, '_woosolid_pickup_telefono', true );
-
-                echo '<p><strong>Punto di ritiro:</strong><br>';
-                echo esc_html( get_the_title( $pickup_id ) ) . '<br>';
-                if ( $indirizzo ) echo esc_html( $indirizzo ) . '<br>';
-                if ( $citta || $provincia ) echo esc_html( trim( $citta . ' ' . $provincia ) ) . '<br>';
-                if ( $nazione ) echo esc_html( $nazione ) . '<br>';
-                if ( $orari ) echo '<br><strong>Orari:</strong> ' . nl2br( esc_html( $orari ) ) . '<br>';
-                if ( $referente ) echo '<strong>Referente:</strong> ' . esc_html( $referente ) . '<br>';
-                if ( $telefono ) echo '<strong>Telefono:</strong> ' . esc_html( $telefono ) . '<br>';
-                echo '</p>';
-            }
-
-        } elseif ( ! empty( $delivery ) ) {
-
-            echo '<p><strong>Consegna a domicilio:</strong><br>';
-            echo nl2br( esc_html( $delivery ) );
-            echo '</p>';
-
-        } else {
-
-            echo '<p><strong>Indirizzo di consegna:</strong><br>';
-            echo wp_kses_post( $order->get_formatted_shipping_address() );
-            echo '</p>';
-        }
+        echo '<p><strong>Punto di ritiro:</strong><br>' . esc_html( $pickup ) . '</p>';
 
         echo '</section>';
     }
