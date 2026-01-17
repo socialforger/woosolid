@@ -1,72 +1,46 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 class WooSolid_WooCommerce {
 
     public static function init() {
-        add_action( 'woocommerce_checkout_create_order', [ __CLASS__, 'store_donations_in_order' ], 20, 2 );
+
+        // Aggiunge badge "Quota solidale" nella lista prodotti
+        add_filter( 'woocommerce_product_get_name', [ __CLASS__, 'add_solidarity_badge' ], 10, 2 );
+
+        // Aggiunge info nel carrello
+        add_filter( 'woocommerce_cart_item_name', [ __CLASS__, 'cart_item_label' ], 10, 3 );
     }
 
-    public static function store_donations_in_order( $order, $data ) {
-        $items = $order->get_items();
+    /**
+     * Badge nella lista prodotti
+     */
+    public static function add_solidarity_badge( $name, $product ) {
 
-        $fee_by_campaign = [];
+        $is_donation = $product->get_meta( '_woosolid_is_donation' );
 
-        foreach ( $items as $item ) {
-            $product = $item->get_product();
-            if ( ! $product ) {
-                continue;
-            }
-
-            $product_id  = $product->get_id();
-            $campaign_id = get_post_meta( $product_id, '_woosolid_campaign_id', true );
-
-            if ( ! $campaign_id ) {
-                continue;
-            }
-
-            $fee_mode   = get_post_meta( $product_id, '_woosolid_fee_mode', true );
-            $fee_amount = (float) get_post_meta( $product_id, '_woosolid_fee_amount', true );
-
-            if ( $fee_amount <= 0 ) {
-                continue;
-            }
-
-            $qty        = $item->get_quantity();
-            $line_total = (float) $item->get_total();
-
-            if ( 'percent' === $fee_mode ) {
-                $fee = ( $line_total * $fee_amount / 100 );
-            } else {
-                $fee = $fee_amount * $qty;
-            }
-
-            if ( $fee <= 0 ) {
-                continue;
-            }
-
-            if ( ! isset( $fee_by_campaign[ $campaign_id ] ) ) {
-                $fee_by_campaign[ $campaign_id ] = 0;
-            }
-
-            $fee_by_campaign[ $campaign_id ] += $fee;
+        if ( $is_donation === 'yes' ) {
+            return $name . ' <span style="color:#c0392b; font-weight:bold;">(Quota solidale)</span>';
         }
 
-        if ( ! empty( $fee_by_campaign ) ) {
-            $donations = [
-                'fee' => [],
-            ];
+        return $name;
+    }
 
-            foreach ( $fee_by_campaign as $campaign_id => $amount ) {
-                $donations['fee'][] = [
-                    'campaign_id' => $campaign_id,
-                    'amount'      => $amount,
-                ];
-            }
+    /**
+     * Etichetta nel carrello
+     */
+    public static function cart_item_label( $name, $cart_item, $cart_item_key ) {
 
-            $order->update_meta_data( '_woosolid_donations', $donations );
+        $product = $cart_item['data'];
+        $is_donation = $product->get_meta( '_woosolid_is_donation' );
+
+        if ( $is_donation === 'yes' ) {
+            $campaign_id = $product->get_meta( '_woosolid_campaign_id' );
+            $campaign = $campaign_id ? get_the_title( $campaign_id ) : 'Campagna non selezionata';
+
+            $name .= '<br><small style="color:#27ae60;">Finanzia la campagna: ' . esc_html( $campaign ) . '</small>';
         }
+
+        return $name;
     }
 }
